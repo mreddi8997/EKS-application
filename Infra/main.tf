@@ -9,7 +9,7 @@ module "rds" {
   rds_allowed_security_groups = [module.eks.node_security_group_id]
   rds_db_name                 = "customer_feedback_db"
   rds_username                = "feedbackuser"
-  vpc_id                      = module.vpc.vpcid
+  vpc_id                      = module.vpc.vpc_id
 
   depends_on = [module.vpc, module.eks]
 }
