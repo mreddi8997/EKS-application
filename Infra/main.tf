@@ -26,6 +26,14 @@ module "eks" {
 
 
   endpoint_public_access = true
+
+addons = {
+  vpc-cni = {
+    before_compute = true
+  }
+  coredns    = {}
+  kube-proxy = {}
+}
   
 
    eks_managed_node_groups = {
