@@ -76,6 +76,7 @@ resource "aws_nat_gateway" "main" {
     Name = "${var.vpc_name}-nat"
   }
 }
+depends_on = [aws_internet_gateway.main]
 
 resource "aws_eip" "nat" {
   domain = "vpc"
