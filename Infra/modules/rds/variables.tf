@@ -77,3 +77,10 @@ variable "rds_db_subnet_ids" {
     error_message = "At least one subnet ID must be specified for the RDS database."
   }
 }
+variable "rds_username" {
+  description = "specify the db username"
+  type        = string
+}
+variable "vpc_id" {
+  type = string
+}
