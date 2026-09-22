@@ -1,13 +1,14 @@
 module "vpc" {
-  source = "./vpc"
+  source = "./modules/vpc"
 }
 
 module "rds" {
-  source = "./rds"
+  source = "./modules/rds"
   vpc_name                    = module.vpc.vpc_name
   rds_db_subnet_ids           = module.vpc.rds_subnet_ids
   rds_allowed_security_groups = [module.eks.node_security_group_id]
-  rds_db_name                     = "customer_feedback_db"
+  rds_db_name                 = "customer_feedback_db"
+  rds_username                = "feedbackuser"
 
   depends_on = [module.vpc, module.eks]
 }
