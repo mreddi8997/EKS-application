@@ -31,4 +31,13 @@ jobs:
       - name: Verify versions
         run: |
           terraform version
+
+      - name: Check formatting
+        run: terraform fmt -check -recursive
+
+      - name: Initialize for validation
+        run: terraform init -backend=false
+
+      - name: Validate configuration
+        run: terraform validate    
           
