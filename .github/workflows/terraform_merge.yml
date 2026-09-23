@@ -10,7 +10,7 @@ permissions:
 
 env:
   TF_VERSION: "1.10.0"
-  
+
 jobs:
   setup:
     runs-on: ubuntu-latest
@@ -29,8 +29,7 @@ jobs:
           terraform_version: ${{ env.TF_VERSION }}
 
       - name: Verify versions
-        run: |
-          terraform version
+        run: terraform version
 
       - name: Configure provider cache
         run: |
@@ -52,14 +51,78 @@ jobs:
             echo "Provider cache restored."
           else
             echo "No matching cache. Terraform will download providers."
-          fi   
+          fi
 
       - name: Check formatting
-        run: terraform fmt -recursive
+        run: terraform fmt -check -recursive
 
       - name: Initialize for validation
         run: terraform init -backend=false
 
       - name: Validate configuration
-        run: terraform validate    
-          
+        run: terraform validate
+
+  quality:
+    name: Quality Gate
+    needs: setup
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: Infra
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: "v0.52.0"
+
+      - name: Initialize lint plugins
+        run: tflint --init
+
+      - name: Enforce quality rules
+        run: tflint --recursive --format compact
+
+  security:
+    name: Security Gate
+    needs: setup
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: .
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Enforce Trivy security checks
+        id: trivy
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: config
+          scan-ref: Infra
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+
+      # Run Checkov even if Trivy reports failures.
+      # The job remains failed if either scanner fails.
+      - name: Setup Python and package cache
+        if: ${{ !cancelled() && (success() || failure()) }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-security.txt
+
+      - name: Install Checkov
+        id: install-checkov
+        if: ${{ !cancelled() && (success() || failure()) }}
+        run: python -m pip install -r requirements-security.txt
+
+      - name: Enforce Checkov policies
+        if: ${{ !cancelled() && (success() || failure()) && steps.install-checkov.outcome == 'success' }}
+        run: checkov -d Infra --framework terraform
