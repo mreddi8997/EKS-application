@@ -19,8 +19,8 @@ module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "21.25.3"
 
-  name                    = "Customer-feedback-application-cluster"
-  kubernetes_version      = "1.35"
+  name                     = "Customer-feedback-application-cluster"
+  kubernetes_version       = "1.35"
   node_security_group_name = "Customer-feedback-application-node-sg"
   security_group_name      = "Customer-feedback-application-sg"
 
