@@ -126,3 +126,7 @@ jobs:
       - name: Enforce Checkov policies
         if: ${{ !cancelled() && (success() || failure()) && steps.install-checkov.outcome == 'success' }}
         run: checkov -d Infra --framework terraform --hard-fail-on CRITICAL
+
+
+
+ 
