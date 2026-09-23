@@ -20,7 +20,7 @@ module "eks" {
   version = "21.25.3"
 # source  = " git::https://github.com/terraform-aws-modules/terraform-aws-eks.git?ref=21.25.3
 
-  name                         = "Customer-feedback-application-cluster"
+  name                         = "Customer-feedback"
   kubernetes_version           = "1.35"
   node_security_group_name     = "Customer-feedback-application-node-sg"
   security_group_name          = "Customer-feedback-application-sg"
