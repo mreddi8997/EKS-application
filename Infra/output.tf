@@ -11,6 +11,6 @@ output "cluster_state" {
 }
 
 output "node_iam_role_arn" {
-  value =  module.eks.eks_managed_node_groups["standard-node-group"].iam_role_arn
+  value = module.eks.eks_managed_node_groups["standard-node-group"].iam_role_arn
 }
 
