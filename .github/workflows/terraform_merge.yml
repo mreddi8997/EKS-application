@@ -17,7 +17,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: /Infra
+        working-directory: Infra
 
     steps:
       - name: Checkout repository
