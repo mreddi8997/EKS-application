@@ -19,21 +19,22 @@ resource "aws_db_subnet_group" "main" {
 }
 
 resource "aws_db_instance" "main" {
-  allocated_storage           = var.rds_allocated_storage
-  storage_type                = var.rds_storage_type
-  engine                      = var.rds_engine
-  engine_version              = var.rds_engine_version
-  instance_class              = var.rds_instance_class
-  db_name                     = var.rds_db_name
-  username                    = var.rds_username
-  manage_master_user_password = true
-  parameter_group_name        = var.rds_parameter_group_name
-  skip_final_snapshot         = var.rds_skip_final_snapshot
-  publicly_accessible         = false
-  vpc_security_group_ids      = [aws_security_group.rds.id]
-  db_subnet_group_name        = aws_db_subnet_group.main.name
-  kms_key_id                  = aws_kms_key.rds_key.arn
-  storage_encrypted           = true
+  allocated_storage               = var.rds_allocated_storage
+  storage_type                    = var.rds_storage_type
+  engine                          = var.rds_engine
+  engine_version                  = var.rds_engine_version
+  instance_class                  = var.rds_instance_class
+  db_name                         = var.rds_db_name
+  username                        = var.rds_username
+  manage_master_user_password     = true
+  parameter_group_name            = var.rds_parameter_group_name
+  skip_final_snapshot             = var.rds_skip_final_snapshot
+  publicly_accessible             = false
+  vpc_security_group_ids          = [aws_security_group.rds.id]
+  db_subnet_group_name            = aws_db_subnet_group.main.name
+  kms_key_id                      = aws_kms_key.rds_key.arn
+  storage_encrypted               = true
+  enabled_cloudwatch_logs_exports = ["postgresql", "upgrade"]
 
 
   tags = {
