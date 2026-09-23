@@ -18,6 +18,7 @@ module "rds" {
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "21.25.3"
+# source  = " git::https://github.com/terraform-aws-modules/terraform-aws-eks.git?ref=21.25.3
 
   name                         = "Customer-feedback-application-cluster"
   kubernetes_version           = "1.35"
