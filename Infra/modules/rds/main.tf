@@ -56,7 +56,7 @@ resource "aws_security_group" "rds" {
     from_port       = 0
     to_port         = 0
     protocol        = "-1"
-    security_groups = var.rds_allowed_secuirty_groups 
+    security_groups = var.rds_allowed_security_groups 
   }
 }
 
