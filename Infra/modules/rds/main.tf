@@ -32,6 +32,8 @@ resource "aws_db_instance" "main" {
   publicly_accessible         = false
   vpc_security_group_ids      = [aws_security_group.rds.id]
   db_subnet_group_name        = aws_db_subnet_group.main.name
+  kms_key_id                  = aws_kms_key.rds_key.arn
+
 
   tags = {
     Name = "${var.vpc_name}-rds-instance"
@@ -56,4 +58,8 @@ resource "aws_security_group" "rds" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+}
+
+resource "aws_kms_key" "rds_key" {
+  description = "KMS Key for rds"
 }
