@@ -126,6 +126,59 @@ jobs:
       - name: Enforce Checkov policies
         if: ${{ !cancelled() && (success() || failure()) && steps.install-checkov.outcome == 'success' }}
         run: checkov -d Infra --framework terraform --hard-fail-on CRITICAL
+  
+  plan:
+    name: Terraform Plan
+    needs: [quality, security]
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    permissions:
+      contents: read
+      id-token: write
+
+    defaults:
+      run:
+        working-directory: Infra
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: Configure provider cache
+        run: |
+          mkdir -p "$HOME/.terraform.d/plugin-cache"
+          echo "TF_PLUGIN_CACHE_DIR=$HOME/.terraform.d/plugin-cache" >> "$GITHUB_ENV"
+
+      - name: Restore provider cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.terraform.d/plugin-cache
+          key: tf-providers-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Infra/.terraform.lock.hcl') }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::431445718171:role/OIDC_github_eks-application
+          aws-region: us-east-2
+
+      - name: Verify AWS identity
+        run: aws sts get-caller-identity
+
+      - name: Initialize remote backend
+        run: terraform init -input=false -lockfile=readonly
+
+      - name: Generate Terraform plan
+        run: terraform plan -input=false -lock-timeout=5m -no-color
 
 
 
