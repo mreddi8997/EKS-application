@@ -107,7 +107,7 @@ resource "aws_route_table_association" "rds" {
 
 resource "aws_route_table" "rds" {
   vpc_id = aws_vpc.main.id
-
+}
 
 resource "aws_security_group" "vpc_sg" {
   name        = "${var.vpc_name}-sg"
