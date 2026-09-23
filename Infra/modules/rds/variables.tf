@@ -63,9 +63,9 @@ variable "rds_allowed_security_groups" {
 }
 
 variable "vpc_name" {
-   type = string
-   description = "The name of the VPC"
-}   
+  type        = string
+  description = "The name of the VPC"
+}
 
 variable "rds_db_subnet_ids" {
   description = "List of subnet IDs for the RDS database"
@@ -77,10 +77,12 @@ variable "rds_db_subnet_ids" {
     error_message = "At least one subnet ID must be specified for the RDS database."
   }
 }
+
 variable "rds_username" {
   description = "specify the db username"
   type        = string
 }
+
 variable "vpc_id" {
   type = string
 }
