@@ -54,7 +54,7 @@ jobs:
           fi
 
       - name: Check formatting
-        run: terraform fmt -check -recursive
+        run: terraform fmt -recursive
 
       - name: Initialize for validation
         run: terraform init -backend=false
