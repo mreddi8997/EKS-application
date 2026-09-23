@@ -31,5 +31,5 @@ variable "availability_zones" {
 variable "vpc_name" {
   description = "The name of the VPC"
   type        = string
-  default     = "Project-VPC"
+  default     = "project-vpc"
 }
