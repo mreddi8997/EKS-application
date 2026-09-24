@@ -178,8 +178,83 @@ jobs:
         run: terraform init -input=false -lockfile=readonly
 
       - name: Generate Terraform plan
-        run: terraform plan -input=false -lock-timeout=5m -no-color
+        run: terraform plan -input=false -lock-timeout=5m -out=tfplan -no-color
 
+      - name: Upload deployment plan
+        id: save-plan
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          PLAN_BUCKET: ${{ vars.TF_PLAN_BUCKET }}
+        run: |
+          set -euo pipefail
+          : "${PLAN_BUCKET:?TF_PLAN_BUCKET is not configured}"
 
+          PLAN_KEY="plan/${GITHUB_RUN_ID}/${GITHUB_RUN_ATTEMPT}/tfplan"
 
- 
+          aws s3 cp \
+            tfplan \
+            "s3://${PLAN_BUCKET}/${PLAN_KEY}" \
+            --only-show-errors
+
+          echo "plan_key=${PLAN_KEY}" >> "$GITHUB_OUTPUT"
+          echo "Terraform plan uploaded to s3://${PLAN_BUCKET}/${PLAN_KEY}"
+   apply:
+    name: Deploy Infrastructure
+    needs: plan
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: production
+
+    permissions:
+      contents: read
+      id-token: write
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: Infra
+
+    steps:
+      - name: Checkout planned commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_APPLY_ROLE_ARN }}
+          aws-region: us-east-2
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.10.0"
+        
+
+      - name: Terraform Init
+        run: terraform init -input=false -lockfile=readonly
+
+      - name: Download approved plan
+        env:
+          PLAN_BUCKET: ${{ vars.TF_PLAN_BUCKET }}
+          PLAN_KEY: ${{ needs.plan.outputs.plan_key }}
+        run: |
+          set -euo pipefail
+          : "${PLAN_BUCKET:?TF_PLAN_BUCKET is not configured}"
+          : "${PLAN_KEY:?The plan job did not provide a plan key}"
+
+          aws s3 cp \
+            "s3://${PLAN_BUCKET}/${PLAN_KEY}" \
+            tfplan \
+            --only-show-errors
+
+      - name: Terraform Apply
+        run: terraform apply -input=false -lock-timeout=5m -no-color tfplan
+
+      - name: Deployment Status
+        run: |
+          echo "Production deployment successful"
+          echo "Commit: ${GITHUB_SHA}"
