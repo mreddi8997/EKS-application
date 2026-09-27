@@ -186,7 +186,7 @@ jobs:
         env:
           PLAN_BUCKET: ${{ vars.TF_PLAN_BUCKET }}
         run: |
-          set -euo pipefail
+          set -euo pipefail # "this command specifies the pipline to  stop incase any errors or failure is noticed"
           : "${PLAN_BUCKET:?TF_PLAN_BUCKET is not configured}"
 
           PLAN_KEY="plan/${GITHUB_RUN_ID}/${GITHUB_RUN_ATTEMPT}/tfplan"
