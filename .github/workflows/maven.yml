@@ -43,6 +43,7 @@ jobs:
 
     - name: Run Snyk dependency scan
       working-directory: retail-store-sample-app/src/ui
-      run: snyk test --file=pom.xml -d
+      run: snyk test --file=pom.xml  --org=8e62a96d-602f-4a6e-b026-a9a4bc1c1605 -d
       env:
        SNYK_TOKEN: ${{ secrets.SNYK}}
+       
