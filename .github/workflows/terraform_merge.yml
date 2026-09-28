@@ -1,9 +1,9 @@
 name: Terraform Infrastructure
 
-on:
-  pull_request:
-    branches: [main]
-  workflow_dispatch:
+# on:
+#  pull_request:
+ #   branches: [main]
+  # workflow_dispatch:
 
 permissions:
   contents: read
