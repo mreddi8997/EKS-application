@@ -38,6 +38,7 @@ jobs:
       uses: snyk/actions/setup@806182742461562b67788a64410098c9d9b96adb 
 
     - name: Run Snyk dependency scan
-      run: snyk test --severity-threshold=high
+      working-directory: retail-store-sample-app/src/ui
+      run: snyk test -d
       env:
        SNYK_TOKEN: ${{ secrets.SNYK}}
