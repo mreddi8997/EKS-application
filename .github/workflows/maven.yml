@@ -40,4 +40,4 @@ jobs:
     - name: Run Snyk dependency scan
       run: snyk test --severity-threshold=high
       env:
-       SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+       SNYK_TOKEN: ${{ secrets.SNYK}}
