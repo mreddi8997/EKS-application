@@ -34,3 +34,35 @@ jobs:
         args: --severity-threshold=high
       continue-on-error: true 
 
+    - name: Check Docker
+      run: docker --version
+
+    - name: Build Docker image
+      working-directory: retail-store-sample-app/src/ui
+      env:
+       IMAGE_TAG: v${{ github.run_number }}
+      run: |
+         docker build \
+         -t retail-ui:$IMAGE_TAG .
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Tag Docker image
+      env:
+       IMAGE_TAG: v${{ github.run_number }}
+      run: |
+        docker tag \
+        retail-ui:$IMAGE_TAG \
+        ${{ secrets.DOCKER_USERNAME }}/retail-checkout:$IMAGE_TAG
+
+    - name: Push Docker image
+      env:
+       IMAGE_TAG: v${{ github.run_number }}
+      run: |
+        docker push \
+        ${{ secrets.DOCKER_USERNAME }}/retail-checkout:$IMAGE_TAG   
+
