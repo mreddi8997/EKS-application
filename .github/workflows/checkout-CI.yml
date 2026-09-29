@@ -55,7 +55,7 @@ jobs:
        IMAGE_TAG: v${{ github.run_number }}
       run: |
         docker tag \
-        retail-ui:$IMAGE_TAG \
+        retail-checkout:$IMAGE_TAG \
         ${{ secrets.DOCKER_USERNAME }}/retail-checkout:$IMAGE_TAG
 
     - name: Push Docker image
