@@ -164,6 +164,6 @@ jobs:
         run: terraform plan -input=false -lock-timeout=5m -out=tfplan -no-color
 
       - name: run terraform apply
-        run: terrafrom apply tfplan
+        run: terraform apply tfplan
 
       
