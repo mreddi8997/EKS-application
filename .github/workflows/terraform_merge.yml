@@ -25,7 +25,15 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TF_VERSION }}
+     
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::431445718171:role/OIDC_github_eks-application
+          aws-region: us-east-2
 
+      - name: Verify AWS identity
+        run: aws sts get-caller-identity
       - name: Verify versions
         run: terraform version
 
@@ -35,7 +43,7 @@ jobs:
         run: terraform fmt -recursive
 
       - name: Initialize for validation
-        run: terraform init 
+        run: terraform init -input=false -lockfile=readonly
 
       - name: Validate configuration
         run: terraform validate
