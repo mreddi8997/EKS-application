@@ -1,0 +1,78 @@
+
+name: Go
+
+on: workflow_dispatch
+
+defaults:
+  run:
+    working-directory: retail-store-sample-app/src/catalog
+ 
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.25.x'
+        cache-dependency-path: retail-store-sample-app/src/catalog
+
+    - name: Install dependencies
+      run: |
+          go get .    
+
+    - name: Test
+      working-directory: retail-store-sample-app/src/catalog/test
+      run: go test -v ./...
+
+    - name: Run Snyk to check for vulnerabilities 
+      run: snyk test --severity-threshold=high
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK }}
+      continue-on-error: true
+
+
+
+  docker-image:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+   
+    
+    - name: Check Docker
+      run: docker --version
+
+    - name: Build Docker image
+      working-directory: retail-store-sample-app/src/catalog
+      env:
+       IMAGE_TAG: v${{ github.run_number }}
+      run: |
+         docker build \
+         -t retail-catalog:$IMAGE_TAG .
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Tag Docker image
+      env:
+       IMAGE_TAG: v${{ github.run_number }}
+      run: |
+        docker tag \
+        retail-catalog:$IMAGE_TAG \
+        ${{ secrets.DOCKER_USERNAME }}/retail-catalog:$IMAGE_TAG
+
+    - name: Push Docker image
+      env:
+       IMAGE_TAG: v${{ github.run_number }}
+      run: |
+        docker push \
+        ${{ secrets.DOCKER_USERNAME }}/retail-catalog:$IMAGE_TAG
