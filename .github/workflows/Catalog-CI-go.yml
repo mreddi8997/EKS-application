@@ -29,6 +29,9 @@ jobs:
       working-directory: retail-store-sample-app/src/catalog/test
       run: go test -v ./...
 
+    - name: setup snyk
+      uses: snyk/actions/setup@master
+
     - name: Run Snyk to check for vulnerabilities 
       run: snyk test --severity-threshold=high
       env:
