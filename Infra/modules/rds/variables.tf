@@ -42,7 +42,7 @@ variable "rds_engine_version" {
 variable "rds_parameter_group_name" {
   description = "The name of the RDS parameter group"
   type        = string
-  default     = "default.postgres15"
+  default     = "default.postgres18"
 }
 
 variable "rds_skip_final_snapshot" {
