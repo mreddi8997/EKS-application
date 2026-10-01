@@ -26,18 +26,6 @@ module "eks" {
   security_group_name          = "Customer-feedback-application-sg"
   
 
-
-node_security_group_additional_rules = {
-  egress_all = {
-    description = "Allow outbound traffic within the VPC"
-    type        = "egress"
-    protocol    = "-1"
-    from_port   = 0
-    to_port     = 0
-    cidr_blocks = ["10.0.0.0/16"]
-  }
-}
-
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnet_ids
 
