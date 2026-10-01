@@ -1,4 +1,4 @@
-name: cart-UI
+name: cart-CI
 
 on: workflow_dispatch
 
@@ -27,6 +27,13 @@ jobs:
       working-directory: retail-store-sample-app/src/cart   
     
     - name: Build with Maven
+      env:
+       AWS_ACCESS_KEY_ID: test
+       AWS_SECRET_ACCESS_KEY: test
+       AWS_SESSION_TOKEN: test
+       AWS_REGION: us-east-2
+       AWS_DEFAULT_REGION: us-east-2
+       AWS_EC2_METADATA_DISABLED: true
       run: mvn -B package --file pom.xml
 
   
