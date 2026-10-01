@@ -36,7 +36,7 @@ variable "rds_storage_type" {
 variable "rds_engine_version" {
   description = "The engine version for the RDS instance"
   type        = string
-  default     = "15.3"
+  default     = "18.3"
 }
 
 variable "rds_parameter_group_name" {
