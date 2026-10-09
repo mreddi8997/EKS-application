@@ -1,0 +1,180 @@
+name: Terraform Dev Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "Apply after reviewing the plan and approving dev-apply?"
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: terraform-dev
+  cancel-in-progress: false
+
+env:
+  TF_VERSION: "1.10.0"
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+
+jobs:
+  plan:
+    name: Plan dev
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: dev
+
+    permissions:
+      contents: read
+      id-token: write
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: Infra/environments/dev
+
+    outputs:
+      plan_uri: ${{ steps.save.outputs.plan_uri }}
+      plan_sha256: ${{ steps.save.outputs.plan_sha256 }}
+      has_changes: ${{ steps.plan.outputs.has_changes }}
+
+    steps:
+      - name: Checkout workflow commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: Authenticate planning role
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          allowed-account-ids: "431445718171"
+          role-session-name: dev-plan-${{ github.run_id }}
+
+      - name: Initialize Terraform
+        run: terraform init -input=false -lockfile=readonly
+
+      - name: Validate Terraform
+        run: terraform validate -no-color
+
+      - name: Generate saved plan
+        id: plan
+        run: |
+          set +e
+          terraform plan \
+            -input=false \
+            -lock-timeout=5m \
+            -no-color \
+            -detailed-exitcode \
+            -out=tfplan
+          result=$?
+          set -e
+
+          case "$result" in
+            0)
+              echo "has_changes=false" >> "$GITHUB_OUTPUT"
+              ;;
+            2)
+              echo "has_changes=true" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              exit "$result"
+              ;;
+          esac
+
+      - name: Save plan to S3
+        id: save
+        run: |
+          plan_uri="s3://terraform-backend-mohit/pipeline-plans/dev/${GITHUB_RUN_ID}/${GITHUB_RUN_ATTEMPT}/${GITHUB_SHA}/tfplan"
+          plan_sha256="$(sha256sum tfplan | awk '{print $1}')"
+
+          aws s3 cp tfplan "$plan_uri" \
+            --sse AES256 \
+            --only-show-errors
+
+          echo "plan_uri=$plan_uri" >> "$GITHUB_OUTPUT"
+          echo "plan_sha256=$plan_sha256" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "### Dev Terraform plan"
+            echo
+            echo "- Commit: \`${GITHUB_SHA}\`"
+            echo "- Changes: ${{ steps.plan.outputs.has_changes }}"
+            echo "- Plan checksum: \`${plan_sha256}\`"
+            echo
+            echo "Review the Generate saved plan step before approving."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  apply:
+    name: Apply dev
+    needs: plan
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      inputs.apply &&
+      needs.plan.outputs.has_changes == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    environment: dev-apply
+
+    permissions:
+      contents: read
+      id-token: write
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: Infra/environments/dev
+
+    steps:
+      - name: Checkout planned commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: Authenticate apply role
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          allowed-account-ids: "431445718171"
+          role-session-name: dev-apply-${{ github.run_id }}
+          role-duration-seconds: 3600
+
+      - name: Initialize Terraform
+        run: terraform init -input=false -lockfile=readonly
+
+      - name: Download and verify approved plan
+        env:
+          PLAN_URI: ${{ needs.plan.outputs.plan_uri }}
+          PLAN_SHA256: ${{ needs.plan.outputs.plan_sha256 }}
+        run: |
+          aws s3 cp "$PLAN_URI" tfplan --only-show-errors
+          printf '%s  tfplan\n' "$PLAN_SHA256" | sha256sum --check -
+
+      - name: Apply approved plan
+        run: |
+          terraform apply \
+            -input=false \
+            -lock-timeout=5m \
+            -no-color \
+            tfplan

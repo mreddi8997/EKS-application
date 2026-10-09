@@ -30,6 +30,10 @@ module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "21.25.3"
 
+  iam_role_name            = "${local.name}-cluster"
+  iam_role_use_name_prefix = false
+  encryption_policy_name   = "${local.name}-cluster-encryption"
+
   name               = local.name
   kubernetes_version = "1.35"
 
@@ -53,8 +57,11 @@ module "eks" {
     standard = {
       ami_type       = "AL2023_x86_64_STANDARD"
       instance_types = var.node_instance_types
-
-      min_size     = var.node_capacity.min
+      
+      iam_role_name            = "${local.name}-nodes"
+      iam_role_use_name_prefix = false
+      
+       min_size     = var.node_capacity.min
       max_size     = var.node_capacity.max
       desired_size = var.node_capacity.desired
     }
