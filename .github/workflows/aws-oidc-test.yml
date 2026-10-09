@@ -1,0 +1,57 @@
+name: AWS OIDC Authentication Test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  authenticate:
+    name: Authenticate - ${{ matrix.environment }}
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: [dev, test, staging, production]
+
+    environment:
+      name: ${{ matrix.environment }}
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Check environment variables
+        env:
+          AWS_REGION: ${{ vars.AWS_REGION }}
+          AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
+          AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
+        run: |
+          test -n "$AWS_REGION" || {
+            echo "AWS_REGION is missing"
+            exit 1
+          }
+          test -n "$AWS_ACCOUNT_ID" || {
+            echo "AWS_ACCOUNT_ID is missing"
+            exit 1
+          }
+          test -n "$AWS_ROLE_ARN" || {
+            echo "AWS_ROLE_ARN is missing"
+            exit 1
+          }
+
+      - name: Authenticate with AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          allowed-account-ids: ${{ vars.AWS_ACCOUNT_ID }}
+          role-session-name: github-oidc-test-${{ github.run_id }}
+
+      - name: Verify assumed identity
+        run: aws sts get-caller-identity
