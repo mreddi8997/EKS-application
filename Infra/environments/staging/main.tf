@@ -33,6 +33,10 @@ module "eks" {
   name               = local.name
   kubernetes_version = "1.35"
 
+  iam_role_name            = "${local.name}-cluster"
+  iam_role_use_name_prefix = false
+  encryption_policy_name   = "${local.name}-cluster-encryption"
+
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnet_ids
 
@@ -53,6 +57,9 @@ module "eks" {
     standard = {
       ami_type       = "AL2023_x86_64_STANDARD"
       instance_types = var.node_instance_types
+      
+      iam_role_name            = "${local.name}-nodes"
+      iam_role_use_name_prefix = false
 
       min_size     = var.node_capacity.min
       max_size     = var.node_capacity.max
