@@ -35,6 +35,7 @@ resource "aws_db_instance" "main" {
   kms_key_id                      = aws_kms_key.rds_key.arn
   storage_encrypted               = true
   enabled_cloudwatch_logs_exports = ["postgresql", "upgrade"]
+  identifier                      = "${var.vpc_name}-postgres"
 
 
   tags = {
