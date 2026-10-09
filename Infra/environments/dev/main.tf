@@ -43,7 +43,28 @@ module "eks" {
   endpoint_private_access = true
   endpoint_public_access  = false
 
-  enable_cluster_creator_admin_permissions = true
+  enable_cluster_creator_admin_permissions = false
+
+ kms_key_administrators = [
+  "arn:aws:iam::431445718171:role/github-eks-application-dev-apply"
+ ]
+
+ access_entries = {
+  deployment_admin = {
+    principal_arn = "arn:aws:iam::431445718171:role/github-eks-application-dev-apply"
+    type          = "STANDARD"
+
+    policy_associations = {
+      cluster_admin = {
+        policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+
+        access_scope = {
+          type = "cluster"
+        }
+      }
+    }
+  }
+}
 
   addons = {
     vpc-cni = {
