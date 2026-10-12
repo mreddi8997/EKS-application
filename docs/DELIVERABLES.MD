@@ -92,7 +92,7 @@ AWS Load Balancer Controller. Backend Services remain internal.
 
 ![Orders repository, chart path, and namespace](screenshots/argocd-orders-details.png)
 
-### Running microservice pods
+### Running different namespaces 
 
 ![Microservices in dedicated namespaces](screenshots/microservice-pods.png)
 
