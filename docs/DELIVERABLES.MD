@@ -190,6 +190,6 @@ did not match the checkout pod. Updating it to
 
 ![Network policy configuration](screenshots/network-policy.png)
 
-![Allowed connectivity test](screenshots/test-orders.png)
+![Allowed connectivity test](screenshots/Test-orders.png)
 
 ![Blocked connectivity test](screenshots/refused-connection.png)
