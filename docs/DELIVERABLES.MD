@@ -59,3 +59,52 @@ environment directories does not demonstrate deployment to those environments.
 ### Terraform apply result
 
 ![Terraform apply resource summary](screenshots/terraform-apply-summary.png)
+
+## 2. Microservice Deployment with Argo CD and Helm
+
+Five retail microservices were deployed as separate Argo CD Applications.
+Each Application uses its service-specific Helm chart from the GitHub
+repository and deploys into a dedicated namespace.
+
+| Service | Namespace | Helm chart path |
+|---|---|---|
+| UI | ui | retail-store-sample-app/src/ui/chart |
+| Catalog | catalog-dev | retail-store-sample-app/src/catalog/chart |
+| Cart | cart-dev | retail-store-sample-app/src/cart/chart |
+| Checkout | checkout-dev | retail-store-sample-app/src/checkout/chart |
+| Orders | orders-dev | retail-store-sample-app/src/orders/chart |
+
+Argo CD tracks the main branch. Helm values configure service names,
+in-memory storage, and cross-namespace service endpoints.
+
+The application charts contain Kubernetes templates for Deployments,
+Services, service accounts, ConfigMaps, and HPAs. The UI chart also
+contains an Ingress template.
+
+The UI is exposed through an internet-facing ALB managed by the
+AWS Load Balancer Controller. Backend Services remain internal.
+
+### Argo CD Applications
+
+![Microservice synchronization and health](screenshots/argocd-applications.png)
+
+### Application source and destination
+
+![Orders repository, chart path, and namespace](screenshots/argocd-orders-details.png)
+
+### Running microservice pods
+
+![Microservices in dedicated namespaces](screenshots/microservice-pods.png)
+
+### Retail application
+
+![Running retail application UI](screenshots/retail-ui.png)
+
+### Implementation notes
+
+- This implementation uses Helm chart templates rather than a separate k8s/ folder.
+- Application configuration was initially entered through Argo CD's UI.
+  Environment values and Application definitions should also be committed
+  to Git for reproducibility.
+- Application persistence currently uses in-memory storage.
+- The UI ALB currently serves HTTP; HTTPS remains a future improvement.
