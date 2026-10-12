@@ -108,3 +108,20 @@ AWS Load Balancer Controller. Backend Services remain internal.
   to Git for reproducibility.
 - Application persistence currently uses in-memory storage.
 - The UI ALB currently serves HTTP; HTTPS remains a future improvement.
+
+## 3. Horizontal Pod Autoscaling
+
+A bounded HTTP load test was run against the UI Service using Fortio.
+The UI HPA was configured with a minimum of two replicas, a maximum
+of five replicas, and a CPU utilization target of 60%.
+
+The terminal screenshot records the observed HPA metrics and replica
+counts. Argo CD shows the corresponding UI workload and pods.
+
+### HPA scaling evidence
+
+![UI HPA during load testing](screenshots/hpa-scaling.png)
+
+### Scaled UI workload
+
+![UI pods displayed in Argo CD](screenshots/argocd-ui-scaled.png)
