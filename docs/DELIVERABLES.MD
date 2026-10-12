@@ -112,8 +112,8 @@ AWS Load Balancer Controller. Backend Services remain internal.
 ## 3. Horizontal Pod Autoscaling
 
 A bounded HTTP load test was run against the UI Service using Fortio.
-The UI HPA was configured with a minimum of two replicas, a maximum
-of five replicas, and a CPU utilization target of 60%.
+The UI HPA was configured with a minimum of 1 replicas, a maximum
+of 10 replicas, and a CPU utilization target of 50%.
 
 The terminal screenshot records the observed HPA metrics and replica
 counts. Argo CD shows the corresponding UI workload and pods.
