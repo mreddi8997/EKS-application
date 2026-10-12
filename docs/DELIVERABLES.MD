@@ -192,4 +192,4 @@ did not match the checkout pod. Updating it to
 
 ![Allowed connectivity test](screenshots/test-orders.png)
 
-![blocked connectivity test](screenshots/refused-connection.png]  
+![Blocked connectivity test](screenshots/refused-connection.png)
