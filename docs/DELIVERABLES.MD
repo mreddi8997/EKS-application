@@ -162,3 +162,32 @@ monitoring for eks-application-dev.
 CloudWatch Logs Insights was used to query collected container logs.
 
 ![Container log query results](screenshots/cloudwatch-logs-insights.png)
+
+## Network Policy: Checkout Egress Restrictions
+
+Enabled Amazon VPC CNI network-policy enforcement and applied
+`allow-orders-and-dns` in the `checkout-dev` namespace.
+
+The policy selects pods labelled `app.kubernetes.io/name: checkout`
+and permits outbound connections to:
+- Pods in `orders-dev` on TCP port 8080.
+- CoreDNS in `kube-system` on UDP/TCP port 53.
+
+Other outbound traffic from selected pods is blocked. This policy
+does not restrict inbound traffic.
+
+### Verification
+
+- Checkout → orders: connection allowed.
+- Checkout → catalog: connection timed out as expected.
+- DNS resolution: successful.
+
+During troubleshooting, the original selector `name: checkout`
+did not match the checkout pod. Updating it to
+`app.kubernetes.io/name: checkout` corrected enforcement.
+
+### Evidence
+
+![Network policy configuration](screenshots/network-policy.png)
+
+![Allowed and blocked connectivity tests](screenshots/network-policy-tests.png)
