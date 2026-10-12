@@ -51,3 +51,11 @@ s3://terraform-backend-mohit/terraform-backend-mohit/dev/terraform.tfstate
 
 Only the dev deployment is evidenced here. The presence of other
 environment directories does not demonstrate deployment to those environments.
+
+### Managed node group
+
+![Node group status and scaling configuration](screenshots/eks-nodegroup.png)
+
+### Terraform apply result
+
+![Terraform apply resource summary](screenshots/terraform-apply-summary.png)
