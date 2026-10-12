@@ -125,3 +125,40 @@ counts. Argo CD shows the corresponding UI workload and pods.
 ### Scaled UI workload
 
 ![UI pods displayed in Argo CD](screenshots/argocd-ui-scaled.png)
+
+## 4. Observability
+
+Prometheus and Grafana were installed using the kube-prometheus-stack
+Helm chart in the monitoring namespace.
+
+Grafana uses a persistent gp3 EBS volume. Prometheus also has persistent
+storage configured.
+
+The existing EKS node-exporter DaemonSet is scraped through a
+ServiceMonitor. Pod resource usage and Kubernetes workload state are
+collected through the stack's kubelet and kube-state-metrics integrations.
+
+### Grafana dashboards
+
+Dashboard 6417 was imported and its outdated queries were updated
+to use metrics available in the running cluster.
+
+![Cluster dashboard](screenshots/grafana-cluster-dashboard.png)
+
+![Pod-level metrics](screenshots/grafana-pod-metrics.png)
+
+Exported dashboard:
+[kubernetes-cluster-6417.json](dashboards/kubernetes-cluster-6417.json)
+
+### CloudWatch Container Insights
+
+CloudWatch Container Insights provides cluster, node, and workload
+monitoring for eks-application-dev.
+
+![Container Insights metrics](screenshots/cloudwatch-container-insights.png)
+
+### CloudWatch Logs Insights
+
+CloudWatch Logs Insights was used to query collected container logs.
+
+![Container log query results](screenshots/cloudwatch-logs-insights.png)
