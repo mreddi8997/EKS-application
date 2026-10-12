@@ -1,15 +1,28 @@
 # This workflow will build a Java project with Maven, and cache/restore any dependencies to improve the workflow execution time
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-java-with-maven
-name: Java CI with Maven
+name: UI CI and Docker Hub Publish
 
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - "retail-store-sample-app/src/ui/**"
+      - "!retail-store-sample-app/src/ui/chart/**"
+      - ".github/workflows/UI-pipeline.yml"
+  push:
+    branches: [main]
+    paths:
+      - "retail-store-sample-app/src/ui/**"
+      - "!retail-store-sample-app/src/ui/chart/**"
+      - ".github/workflows/UI-pipeline.yml"
+
 
 jobs:
-  build:
+  validation:
     runs-on: ubuntu-latest
     permissions: 
        contents: read
-       packages: write
 
     defaults:
       run:
@@ -29,7 +42,7 @@ jobs:
       working-directory: retail-store-sample-app/src/ui   
     
     - name: Build with Maven
-      run: mvn -B package --file pom.xml
+      run: ./mvnw -B verify
 
   
     - name: Set up Snyk CLI to check for security issues
@@ -42,37 +55,49 @@ jobs:
       env:
        SNYK_TOKEN: ${{ secrets.SNYK}}
 
-    - name: Check Docker
-      run: docker --version
 
-    - name: Build Docker image
-      working-directory: retail-store-sample-app/src/ui
-      env:
-       IMAGE_TAG: v${{ github.run_number }}
-      run: |
-       docker build \
-        -t retail-ui:$IMAGE_TAG .
+  build_and_push:
+    needs: validation
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
-    - name: Login to Docker Hub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
+    env:
+      IMAGE_TAG: sha-${{ github.sha }}
 
-    - name: Tag Docker image
-      env:
-       IMAGE_TAG: v${{ github.run_number }}
-      run: |
-        docker tag \
-        retail-ui:$IMAGE_TAG \
-        ${{ secrets.DOCKER_USERNAME }}/retail-ui:$IMAGE_TAG
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Push Docker image
-      env:
-       IMAGE_TAG: v${{ github.run_number }}
-      run: |
-        docker push \
-        ${{ secrets.DOCKER_USERNAME }}/retail-ui:$IMAGE_TAG
+      - name: Check Docker
+        run: docker --version
+
+      - name: Build Docker image
+        working-directory: retail-store-sample-app/src/ui
+        run: |
+          docker build \
+            -t retail-ui:$IMAGE_TAG .
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Tag Docker image
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+        run: |
+          docker tag \
+            retail-ui:$IMAGE_TAG \
+            "$DOCKER_USERNAME/retail-ui:$IMAGE_TAG"
+
+      - name: Push Docker image
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+        run: |
+          docker push "$DOCKER_USERNAME/retail-ui:$IMAGE_TAG"
 
       
 

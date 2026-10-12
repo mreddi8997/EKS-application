@@ -1,0 +1,235 @@
+# Incident: Grafana metrics unavailable following an EKS node disruption
+
+## Incident summary
+
+Grafana dashboards stopped displaying metrics and reported a connection error to Prometheus.
+
+Investigation showed that the Prometheus pod was stuck in `Terminating` following a `NodeNotReady` event. Its containers continued running and logged Kubernetes API authentication errors. A replacement Prometheus pod eventually started successfully, restoring the monitoring service.
+
+**Environment:** Amazon EKS, kube-prometheus-stack, Grafana, EBS-backed persistent storage.
+
+**Impact:** Monitoring dashboards were temporarily unavailable. Application availability was not established as part of this investigation.
+
+## 1. Identify the symptom
+
+Grafana could not connect to its configured Prometheus endpoint:
+
+```text
+http://monitoring-kube-prometheus-prometheus.monitoring:9090/
+```
+
+We investigated the backend before changing the datasource configuration.
+
+## 2. Check the monitoring workloads
+
+```bash
+kubectl get pods -n monitoring -o wide
+```
+
+Findings:
+
+- Grafana and the Prometheus Operator were running.
+- Prometheus was stuck in `Terminating`.
+- An older kube-state-metrics pod was also terminating.
+- A replacement kube-state-metrics pod had already started.
+
+This suggested a workload or node lifecycle problem.
+
+## 3. Check the Service and its endpoints
+
+```bash
+kubectl get svc monitoring-kube-prometheus-prometheus \
+  -n monitoring
+
+kubectl get endpointslices -n monitoring \
+  -l kubernetes.io/service-name=monitoring-kube-prometheus-prometheus \
+  -o wide
+```
+
+The Service existed and an endpoint address was listed.
+
+**Lesson:** An endpoint address alone does not prove that the application is healthy or accepting connections. Check readiness conditions and the backing pod.
+
+## 4. Examine events
+
+```bash
+kubectl get events -n monitoring \
+  --sort-by=.metadata.creationTimestamp | tail -40
+```
+
+Events showed:
+
+- Prometheus readiness and liveness probe timeouts.
+- `NodeNotReady`.
+- Pod deletion initiated following the disruption.
+- kube-state-metrics rescheduled successfully.
+
+These findings connected the monitoring outage to a node disruption.
+
+## 5. Inspect the affected node
+
+```bash
+kubectl describe node \
+  ip-10-10-3-162.us-east-2.compute.internal
+```
+
+The node had recovered to `Ready=True`.
+
+Other observations:
+
+- Instance type: `t3.small`.
+- Allocatable memory: approximately 1.4 GiB.
+- Prometheus had no CPU or memory requests or limits.
+- An autoscaler deletion-candidate taint was present.
+
+**What we could conclude:** The node had experienced a disruption and subsequently recovered.
+
+**What we could not conclude:** We did not establish whether resource exhaustion, networking, the instance, or autoscaler activity caused the original disruption.
+
+## 6. Inspect the pod’s deletion state
+
+```bash
+POD=prometheus-monitoring-kube-prometheus-prometheus-0
+
+kubectl get pod "$POD" -n monitoring \
+  -o jsonpath='Deletion timestamp: {.metadata.deletionTimestamp}{"\n"}Grace period: {.spec.terminationGracePeriodSeconds}{"\n"}Finalizers: {.metadata.finalizers}{"\n"}{range .status.containerStatuses[*]}Container: {.name}{"\n"}State: {.state}{"\n"}{end}'
+```
+
+Findings:
+
+- A deletion timestamp was present.
+- Termination grace period was 600 seconds.
+- No finalizers were present.
+- Both containers were still reported as running.
+- Prometheus had restarted after deletion was initiated.
+
+There was no evidence of a finalizer blocking deletion.
+
+## 7. Interpret the authentication errors
+
+```bash
+kubectl logs "$POD" -n monitoring \
+  -c prometheus --tail=100
+```
+
+Prometheus repeatedly logged:
+
+```text
+failed to list *v1.Pod: Unauthorized
+failed to list *v1.Service: Unauthorized
+failed to list *v1.Endpoints: Unauthorized
+```
+
+The likely explanation was that the terminating pod’s bound service-account token was no longer valid.
+
+This was a secondary symptom consistent with its deletion state. We did not change AWS IAM policies or grant additional Kubernetes permissions.
+
+## 8. Review shutdown progress
+
+```bash
+kubectl describe pod "$POD" -n monitoring
+```
+
+The kubelet reported stopping both containers. The latest stopping events were about seven minutes old, while the configured termination grace period was ten minutes.
+
+We continued observing the shutdown:
+
+```bash
+kubectl get pods -n monitoring -w
+```
+
+The image was distroless, so a suggested shell-based shutdown command was unsuitable. We did not establish that this command ran successfully.
+
+**Recovery observed:** The terminating pod was replaced. No PVC deletion or force deletion was documented.
+
+## 9. Verify recovery
+
+```bash
+kubectl get pods -n monitoring
+```
+
+The replacement showed:
+
+```text
+prometheus-monitoring-kube-prometheus-prometheus-0
+2/2 Running   0 restarts   approximately 5 minutes old
+```
+
+All listed monitoring pods were running.
+
+The remaining end-to-end checks are:
+
+1. Run **Save & test** on Grafana’s Prometheus datasource.
+2. Refresh the dashboard and confirm current metrics.
+3. Check Prometheus logs for continuing authentication errors.
+
+## Root-cause statement
+
+**Confirmed failure sequence:** A node became unavailable, Prometheus experienced health-check failures and entered termination, and monitoring remained unavailable until a replacement pod started.
+
+**Underlying trigger:** Not confirmed.
+
+The `Unauthorized` messages were likely related to the terminating pod’s invalidated credentials, rather than the original cause of the outage.
+
+## Follow-up improvements
+
+- Configure Prometheus resource requests based on measured usage.
+- Evaluate whether the monitoring workload needs larger nodes or a dedicated node group.
+- Investigate the original node disruption using node logs and EC2 health information.
+- Alert on unavailable Prometheus workloads and unhealthy nodes.
+- Keep dashboard JSON in Git and preserve persistent storage during recovery.
+
+## Interview explanation
+
+“In my EKS lab, I investigated a production-style monitoring outage where Grafana could not reach Prometheus. I checked pods, Services, endpoints, events, and node health. Prometheus was stuck terminating after a node disruption, and its logs showed authentication failures consistent with an invalidated pod-bound token.
+
+I checked the deletion timestamp, finalizers, container states, and shutdown grace period before taking further action. The kubelet was already stopping the containers, so I monitored recovery and preserved the persistent volumes. A replacement pod became healthy.
+
+The main lesson was to distinguish the original failure from secondary symptoms. I also identified missing resource requests as a reliability improvement, while keeping the original node-failure cause open for further investigation.”
+
+## Safe practice exercise
+
+Use the **dev cluster**, after saving your dashboard JSON and recording the healthy baseline.
+
+### A. Capture the baseline
+
+```bash
+kubectl get pods -n monitoring -o wide
+kubectl get pvc -n monitoring
+```
+
+### B. Watch the workload
+
+In a second terminal:
+
+```bash
+kubectl get pods -n monitoring -w
+```
+
+### C. Trigger a normal pod replacement
+
+```bash
+kubectl delete pod \
+  prometheus-monitoring-kube-prometheus-prometheus-0 \
+  -n monitoring --wait=false
+```
+
+This deliberately interrupts your single Prometheus instance while its controller replaces it. It exercises recovery and persistent-volume reuse; it does not reproduce the original node failure or guarantee a stuck termination.
+
+### D. Practice the investigation
+
+Repeat the pod, Service, EndpointSlice, events, logs, and deletion-state checks above.
+
+Observe:
+
+- How readiness changes.
+- Whether Grafana temporarily loses access.
+- How long replacement takes.
+- Whether the PVC is reused.
+- Whether historical metrics remain available.
+
+Do not force-delete the pod or delete its PVC during this exercise.
+
+### E. Record the outcome
+
+Document the interruption time, replacement time, Grafana recovery, and any unexpected events. Compare the normal replacement with the incident’s prolonged termination.
