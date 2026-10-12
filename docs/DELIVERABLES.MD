@@ -41,7 +41,7 @@ Dev Terraform state is stored at:
 
 s3://terraform-backend-mohit/terraform-backend-mohit/dev/terraform.tfstate
 
-![Dev state object in S3](screenshots/terrafrom-s3-statefile.png)
+![Dev state object in S3](screenshots/s3-state.png)
 
 ### Remaining evidence
 
