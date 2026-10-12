@@ -45,8 +45,6 @@ s3://terraform-backend-mohit/terraform-backend-mohit/dev/terraform.tfstate
 
 ### Remaining evidence
 
-- Managed node group status and scaling configuration.
-- Terraform apply resource summary.
 - Verification of the Terraform-managed ECR repository requirement.
 
 Only the dev deployment is evidenced here. The presence of other
@@ -112,7 +110,7 @@ AWS Load Balancer Controller. Backend Services remain internal.
 ## 3. Horizontal Pod Autoscaling
 
 A bounded HTTP load test was run against the UI Service using Fortio.
-The UI HPA was configured with a minimum of 1 replicas, a maximum
+The UI HPA was configured with a minimum of 1 replica, a maximum
 of 10 replicas, and a CPU utilization target of 50%.
 
 The terminal screenshot records the observed HPA metrics and replica
@@ -163,7 +161,7 @@ CloudWatch Logs Insights was used to query collected container logs.
 
 ![Container log query results](screenshots/cloudwatch-logs-insights.png)
 
-## Network Policy: Checkout Egress Restrictions
+## 5. Network Policy: Checkout Egress Restrictions
 
 Enabled Amazon VPC CNI network-policy enforcement and applied
 `allow-orders-and-dns` in the `checkout-dev` namespace.
@@ -193,3 +191,31 @@ did not match the checkout pod. Updating it to
 ![Allowed connectivity test](screenshots/Test-orders.png)
 
 ![Blocked connectivity test](screenshots/refused-connection.png)
+
+## 6. CI and Manual Image Promotion
+
+The UI workflow validates UI changes and publishes Docker Hub images tagged
+`sha-<full-commit-sha>` from main. Pull requests validate without publishing.
+Chart-only changes do not trigger image builds.
+
+Image configuration updates remain manual by design. See
+[Release procedure](RELEASE.md) for prerequisites, promotion, and rollback.
+The other service workflows retain manual triggers and run-number tags.
+A successful run and deployment of the revised UI workflow still need capture.
+
+## 7. Final Acceptance Checklist
+
+| Requirement | Repository status | Remaining work |
+|---|---|---|
+| Terraform infrastructure | Dev configuration and deployment evidence included | Verify OIDC provisioning; Terraform-managed ECR is not established |
+| Kubernetes manifests | Five services have Helm chart templates | Original k8s/ folder requirement differs; commit live values and Applications |
+| Application CI/CD | UI validation and main-only SHA image publication configured | Docker Hub differs from required ECR; capture publish and rollout evidence |
+| Grafana | Screenshots and dashboard JSON included | Confirm screenshots visibly cover CPU, memory, and restart counts |
+| HPA | Load-test screenshots included | Confirm exact 2-to-at-least-5 replica sequence; documented minimum is 1 |
+| README | Root README and release guide added | Export live installation settings to make setup fully reproducible |
+
+Network policy verification is documented, but its YAML is not committed.
+Monitoring Helm values and the node-exporter ServiceMonitor also need export.
+Test, staging, and production deployment/promotion remain proposed architecture,
+not completed live deployments. No new cluster changes were made during this
+repository wrap-up.
