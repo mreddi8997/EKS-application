@@ -4,12 +4,6 @@ name: UI CI and Docker Hub Publish
 
 on:
   workflow_dispatch:
-  pull_request:
-    branches: [main]
-    paths:
-      - "retail-store-sample-app/src/ui/**"
-      - "!retail-store-sample-app/src/ui/chart/**"
-      - ".github/workflows/UI-pipeline.yml"
   push:
     branches: [main]
     paths:
