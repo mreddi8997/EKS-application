@@ -45,7 +45,6 @@ s3://terraform-backend-mohit/terraform-backend-mohit/dev/terraform.tfstate
 
 ### Remaining evidence
 
-- Verification of the Terraform-managed ECR repository requirement.
 
 Only the dev deployment is evidenced here. The presence of other
 environment directories does not demonstrate deployment to those environments.
