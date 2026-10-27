@@ -150,10 +150,4 @@ jobs:
               .addLink('Review candidate PR', pr.html_url)
               .write();
 
-      - name: Save candidate artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: passed-candidate-${{ github.run_attempt }}
-          path: candidate.json
-          if-no-files-found: error
-          retention-days: 90
+  
