@@ -3,8 +3,8 @@ name: Release Candidate Lab
 on:
   workflow_dispatch:
     inputs:
-      validation_run_id:
-        description: "Successful Validate Candidate Lab run ID"
+      candidate_id:
+        description: "Candidate ID from release-candidates, e.g. rc-3-1"
         required: true
         type: string
 
@@ -18,28 +18,59 @@ concurrency:
 
 jobs:
   load_candidate:
-    name: Load and verify saved candidate
+    name: Load candidate from Git
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+
     outputs:
       image: ${{ steps.candidate.outputs.image }}
+      candidate_id: ${{ steps.candidate.outputs.candidate_id }}
 
     steps:
-      - name: Verify selected validation run
-        id: verify
+      - name: Read candidate and verify validation
+        id: candidate
         uses: actions/github-script@v7
         env:
-          VALIDATION_RUN_ID: ${{ inputs.validation_run_id }}
+          CANDIDATE_ID: ${{ inputs.candidate_id }}
         with:
           script: |
-            const id = process.env.VALIDATION_RUN_ID.trim();
-            if (!/^[0-9]+$/.test(id)) {
-              throw new Error('Enter a numeric workflow run ID');
+            const id = process.env.CANDIDATE_ID.trim();
+
+            if (!/^rc-[0-9]+-[0-9]+$/.test(id)) {
+              throw new Error('Expected a candidate ID such as rc-3-1');
+            }
+
+            const {data: file} = await github.rest.repos.getContent({
+              ...context.repo,
+              path: `release-candidates/${id}.json`,
+              ref: context.sha
+            });
+
+            if (Array.isArray(file) || file.type !== 'file') {
+              throw new Error('Candidate must be a file');
+            }
+
+            const c = JSON.parse(
+              Buffer.from(file.content, 'base64').toString('utf8')
+            );
+
+            if (
+              c.schema_version !== 1 ||
+              c.simulation !== true ||
+              c.candidate_id !== id ||
+              c.repository !== process.env.GITHUB_REPOSITORY ||
+              c.dev_smoke !== 'passed' ||
+              c.test !== 'passed' ||
+              typeof c.image !== 'string' ||
+              !c.image.trim() ||
+              !/^[0-9]+$/.test(String(c.validation_run_id))
+            ) {
+              throw new Error('Invalid candidate record');
             }
 
             const {data: run} = await github.rest.actions.getWorkflowRun({
               ...context.repo,
-              run_id: Number(id)
+              run_id: Number(c.validation_run_id)
             });
 
             if (
@@ -47,61 +78,25 @@ jobs:
               run.head_branch !== 'main' ||
               run.event !== 'workflow_dispatch' ||
               run.status !== 'completed' ||
-              run.conclusion !== 'success'
+              run.conclusion !== 'success' ||
+              run.head_sha !== c.validated_commit ||
+              String(run.run_attempt) !== String(c.validation_attempt)
             ) {
-              throw new Error(
-                'Select a completed, successful validation run from main'
-              );
-            }
-
-            core.setOutput('run_id', String(run.id));
-            core.setOutput('attempt', String(run.run_attempt));
-            core.setOutput('sha', run.head_sha);
-
-      - name: Download selected candidate
-        uses: actions/download-artifact@v4
-        with:
-          name: passed-candidate-${{ steps.verify.outputs.attempt }}
-          path: selected-candidate
-          run-id: ${{ steps.verify.outputs.run_id }}
-          github-token: ${{ github.token }}
-
-      - name: Read and verify candidate
-        id: candidate
-        uses: actions/github-script@v7
-        env:
-          EXPECTED_RUN: ${{ steps.verify.outputs.run_id }}
-          EXPECTED_ATTEMPT: ${{ steps.verify.outputs.attempt }}
-          EXPECTED_SHA: ${{ steps.verify.outputs.sha }}
-        with:
-          script: |
-            const fs = require('fs');
-            const c = JSON.parse(
-              fs.readFileSync('selected-candidate/candidate.json', 'utf8')
-            );
-
-            if (
-              c.simulation !== true ||
-              c.repository !== process.env.GITHUB_REPOSITORY ||
-              c.validation_run_id !== process.env.EXPECTED_RUN ||
-              c.validation_attempt !== process.env.EXPECTED_ATTEMPT ||
-              c.source_sha !== process.env.EXPECTED_SHA ||
-              typeof c.image !== 'string' ||
-              !c.image.trim()
-            ) {
-              throw new Error('Candidate metadata does not match validation');
+              throw new Error('Candidate validation could not be verified');
             }
 
             core.setOutput('image', c.image);
+            core.setOutput('candidate_id', id);
 
             await core.summary
-              .addHeading('Selected release candidate — simulation')
+              .addHeading('Selected candidate — simulation')
               .addTable([
                 ['Field', 'Value'],
+                ['Candidate', id],
                 ['Image', c.image],
-                ['Validation run ID', c.validation_run_id],
-                ['Validated commit', c.source_sha]
+                ['Validated commit', c.validated_commit]
               ])
+              .addLink('Validation evidence', run.html_url)
               .write();
 
   staging:
@@ -109,11 +104,15 @@ jobs:
     needs: load_candidate
     runs-on: ubuntu-latest
     environment: staging
+
     env:
       IMAGE: ${{ needs.load_candidate.outputs.image }}
+      CANDIDATE: ${{ needs.load_candidate.outputs.candidate_id }}
+
     steps:
       - name: Simulate staging deployment and verification
         run: |
+          echo "SIMULATION: Candidate $CANDIDATE"
           echo "SIMULATION: Deploying $IMAGE to staging"
           echo "SIMULATION: Staging verification passed"
           echo "Staging image: $IMAGE" >> "$GITHUB_STEP_SUMMARY"
@@ -123,11 +122,15 @@ jobs:
     needs: [load_candidate, staging]
     runs-on: ubuntu-latest
     environment: production
+
     env:
       IMAGE: ${{ needs.load_candidate.outputs.image }}
+      CANDIDATE: ${{ needs.load_candidate.outputs.candidate_id }}
+
     steps:
       - name: Simulate production deployment and verification
         run: |
+          echo "SIMULATION: Candidate $CANDIDATE"
           echo "SIMULATION: Deploying $IMAGE to production"
           echo "SIMULATION: Production verification passed"
           echo "Production image: $IMAGE" >> "$GITHUB_STEP_SUMMARY"
