@@ -1,46 +1,44 @@
-name: Promotion Flow Lab
+name: Validate Candidate Lab
 
 on:
   workflow_dispatch:
     inputs:
       image:
-        description: "Image reference to promote (simulation only)"
+        description: "Image reference to validate (simulation)"
         required: true
         type: string
       fail_dev_smoke:
         description: "Deliberately fail dev smoke tests?"
-        required: true
         default: false
         type: boolean
 
 permissions:
   contents: read
 
-# Keep one lab promotion running at a time.
 concurrency:
-  group: promotion-flow-lab
+  group: candidate-validation-lab
   cancel-in-progress: false
 
 jobs:
-  dev_deploy:
+  dev:
     name: "DEV — simulated deployment"
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     env:
       IMAGE: ${{ inputs.image }}
     steps:
-      - name: Record selected image
+      - name: Simulate deployment
         run: |
           echo "SIMULATION: Deploying $IMAGE to dev"
-          echo "Selected image: $IMAGE" >> "$GITHUB_STEP_SUMMARY"
 
-  dev_smoke:
+  smoke:
     name: "DEV — simulated smoke tests"
-    needs: dev_deploy
+    needs: dev
     runs-on: ubuntu-latest
     env:
       FAIL_SMOKE: ${{ inputs.fail_dev_smoke }}
     steps:
-      - name: Simulate pass or failure
+      - name: Simulate smoke tests
         run: |
           if [ "$FAIL_SMOKE" = "true" ]; then
             echo "Deliberate smoke-test failure"
@@ -50,38 +48,62 @@ jobs:
 
   test:
     name: "TEST — simulated deployment and tests"
-    needs: dev_smoke
+    needs: smoke
     runs-on: ubuntu-latest
     env:
       IMAGE: ${{ inputs.image }}
     steps:
-      - name: Promote the same image
+      - name: Simulate test deployment and testing
         run: |
           echo "SIMULATION: Deploying $IMAGE to test"
           echo "SIMULATION: Integration tests passed"
 
-  staging:
-    name: "STAGING — approval then simulated deployment"
+  save_candidate:
+    name: Save passed candidate
     needs: test
     runs-on: ubuntu-latest
-    environment: staging
-    env:
-      IMAGE: ${{ inputs.image }}
     steps:
-      - name: Promote approved image
-        run: |
-          echo "SIMULATION: Deploying $IMAGE to staging"
-          echo "SIMULATION: Staging verification passed"
+      - name: Create candidate record
+        uses: actions/github-script@v7
+        env:
+          IMAGE: ${{ inputs.image }}
+        with:
+          script: |
+            const fs = require('fs');
+            const image = process.env.IMAGE.trim();
+            if (!image) {
+              throw new Error('Image reference cannot be empty');
+            }
 
-  production:
-    name: "PRODUCTION — approval then simulated deployment"
-    needs: staging
-    runs-on: ubuntu-latest
-    environment: production
-    env:
-      IMAGE: ${{ inputs.image }}
-    steps:
-      - name: Promote approved image
-        run: |
-          echo "SIMULATION: Deploying $IMAGE to production"
-          echo "Production image: $IMAGE" >> "$GITHUB_STEP_SUMMARY"
+            const candidate = {
+              simulation: true,
+              image,
+              repository: process.env.GITHUB_REPOSITORY,
+              source_sha: process.env.GITHUB_SHA,
+              validation_run_id: process.env.GITHUB_RUN_ID,
+              validation_attempt: process.env.GITHUB_RUN_ATTEMPT,
+              validated_at: new Date().toISOString()
+            };
+
+            fs.writeFileSync(
+              'candidate.json',
+              JSON.stringify(candidate, null, 2)
+            );
+
+            await core.summary
+              .addHeading('Passed simulation candidate')
+              .addTable([
+                ['Field', 'Value'],
+                ['Image', candidate.image],
+                ['Validation run ID', candidate.validation_run_id],
+                ['Commit', candidate.source_sha]
+              ])
+              .write();
+
+      - name: Save candidate artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: passed-candidate-${{ github.run_attempt }}
+          path: candidate.json
+          if-no-files-found: error
+          retention-days: 90
