@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "simulation": true,
+  "candidate_id": "rc-6-1",
+  "image": "example/it-portal:build-143",
+  "repository": "mreddi8997/EKS-application",
+  "validated_commit": "6ad7d2f6cb59f8b5d8fd984b6d7581d478013365",
+  "validation_run_id": "40602750851",
+  "validation_attempt": "1",
+  "validation_url": "https://github.com/mreddi8997/EKS-application/actions/runs/40602750851",
+  "dev_smoke": "passed",
+  "test": "passed",
+  "created_at": "2026-10-27T23:32:12.187Z"
+}
