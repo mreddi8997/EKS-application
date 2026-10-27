@@ -1,0 +1,87 @@
+name: Promotion Flow Lab
+
+on:
+  workflow_dispatch:
+    inputs:
+      image:
+        description: "Image reference to promote (simulation only)"
+        required: true
+        type: string
+      fail_dev_smoke:
+        description: "Deliberately fail dev smoke tests?"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+# Keep one lab promotion running at a time.
+concurrency:
+  group: promotion-flow-lab
+  cancel-in-progress: false
+
+jobs:
+  dev_deploy:
+    name: "DEV — simulated deployment"
+    runs-on: ubuntu-latest
+    env:
+      IMAGE: ${{ inputs.image }}
+    steps:
+      - name: Record selected image
+        run: |
+          echo "SIMULATION: Deploying $IMAGE to dev"
+          echo "Selected image: $IMAGE" >> "$GITHUB_STEP_SUMMARY"
+
+  dev_smoke:
+    name: "DEV — simulated smoke tests"
+    needs: dev_deploy
+    runs-on: ubuntu-latest
+    env:
+      FAIL_SMOKE: ${{ inputs.fail_dev_smoke }}
+    steps:
+      - name: Simulate pass or failure
+        run: |
+          if [ "$FAIL_SMOKE" = "true" ]; then
+            echo "Deliberate smoke-test failure"
+            exit 1
+          fi
+          echo "SIMULATION: Dev smoke tests passed"
+
+  test:
+    name: "TEST — simulated deployment and tests"
+    needs: dev_smoke
+    runs-on: ubuntu-latest
+    env:
+      IMAGE: ${{ inputs.image }}
+    steps:
+      - name: Promote the same image
+        run: |
+          echo "SIMULATION: Deploying $IMAGE to test"
+          echo "SIMULATION: Integration tests passed"
+
+  staging:
+    name: "STAGING — approval then simulated deployment"
+    needs: test
+    runs-on: ubuntu-latest
+    environment: staging
+    env:
+      IMAGE: ${{ inputs.image }}
+    steps:
+      - name: Promote approved image
+        run: |
+          echo "SIMULATION: Deploying $IMAGE to staging"
+          echo "SIMULATION: Staging verification passed"
+
+  production:
+    name: "PRODUCTION — approval then simulated deployment"
+    needs: staging
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      IMAGE: ${{ inputs.image }}
+    steps:
+      - name: Promote approved image
+        run: |
+          echo "SIMULATION: Deploying $IMAGE to production"
+          echo "Production image: $IMAGE" >> "$GITHUB_STEP_SUMMARY"
