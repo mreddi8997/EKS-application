@@ -59,45 +59,95 @@ jobs:
           echo "SIMULATION: Integration tests passed"
 
   save_candidate:
-    name: Save passed candidate
+    name: Open release-candidate PR
     needs: test
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: write
+
     steps:
-      - name: Create candidate record
+      - name: Create candidate file and PR
         uses: actions/github-script@v7
         env:
           IMAGE: ${{ inputs.image }}
         with:
           script: |
-            const fs = require('fs');
             const image = process.env.IMAGE.trim();
             if (!image) {
               throw new Error('Image reference cannot be empty');
             }
 
+            const id =
+              `rc-${process.env.GITHUB_RUN_NUMBER}-${process.env.GITHUB_RUN_ATTEMPT}`;
+            const branch = `candidate/${id}`;
+            const path = `release-candidates/${id}.json`;
+            const runUrl =
+              `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}` +
+              `/actions/runs/${process.env.GITHUB_RUN_ID}`;
+
             const candidate = {
+              schema_version: 1,
               simulation: true,
+              candidate_id: id,
               image,
               repository: process.env.GITHUB_REPOSITORY,
-              source_sha: process.env.GITHUB_SHA,
+              validated_commit: process.env.GITHUB_SHA,
               validation_run_id: process.env.GITHUB_RUN_ID,
               validation_attempt: process.env.GITHUB_RUN_ATTEMPT,
-              validated_at: new Date().toISOString()
+              validation_url: runUrl,
+              dev_smoke: "passed",
+              test: "passed",
+              created_at: new Date().toISOString()
             };
 
-            fs.writeFileSync(
-              'candidate.json',
-              JSON.stringify(candidate, null, 2)
-            );
+            const {data: main} = await github.rest.git.getRef({
+              ...context.repo,
+              ref: 'heads/main'
+            });
+
+            await github.rest.git.createRef({
+              ...context.repo,
+              ref: `refs/heads/${branch}`,
+              sha: main.object.sha
+            });
+
+            await github.rest.repos.createOrUpdateFileContents({
+              ...context.repo,
+              branch,
+              path,
+              message: `Record validated candidate ${id}`,
+              content: Buffer.from(
+                JSON.stringify(candidate, null, 2) + '\n'
+              ).toString('base64')
+            });
+
+            const {data: pr} = await github.rest.pulls.create({
+              ...context.repo,
+              base: 'main',
+              head: branch,
+              title: `Release candidate: ${id}`,
+              body: [
+                'Records a candidate that passed the simulated dev/test jobs.',
+                '',
+                `Candidate: ${id}`,
+                `Image: ${image}`,
+                `Validation: ${runUrl}`,
+                '',
+                'Simulation only. No image was deployed or tested.',
+                'Merge after the validation run finishes successfully.'
+              ].join('\n')
+            });
 
             await core.summary
-              .addHeading('Passed simulation candidate')
+              .addHeading('Release-candidate PR created')
               .addTable([
                 ['Field', 'Value'],
-                ['Image', candidate.image],
-                ['Validation run ID', candidate.validation_run_id],
-                ['Commit', candidate.source_sha]
+                ['Candidate', id],
+                ['Image', image]
               ])
+              .addLink('Review candidate PR', pr.html_url)
               .write();
 
       - name: Save candidate artifact
