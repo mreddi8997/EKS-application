@@ -41,7 +41,11 @@ jobs:
         run: |
           set -euo pipefail
 
-          test -n "$SSH_PRIVATE_KEY"
+          if [ -z "$SSH_PRIVATE_KEY" ]; then
+             echo "::error::SSH_PRIVATE_KEY secret is unavailable in this job"
+             exit 1
+          fi
+          
           test -n "$EC2_SSH_HOST_KEY"
 
           [[ "$EC2_HOST" =~ ^[a-zA-Z0-9.-]+$ ]]
