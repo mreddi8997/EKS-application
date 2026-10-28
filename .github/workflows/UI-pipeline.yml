@@ -1,6 +1,6 @@
 # This workflow will build a Java project with Maven, and cache/restore any dependencies to improve the workflow execution time
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-java-with-maven
-name: UI CI and Docker Hub Publish
+name: UI CI and ECR Publish
 
 on:
   workflow_dispatch:
@@ -11,87 +11,161 @@ on:
       - "!retail-store-sample-app/src/ui/chart/**"
       - ".github/workflows/UI-pipeline.yml"
 
-
 jobs:
   validation:
+    name: Validate UI
     runs-on: ubuntu-latest
-    permissions: 
-       contents: read
+
+    permissions:
+      contents: read
 
     defaults:
       run:
         working-directory: retail-store-sample-app/src/ui
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up JDK 21
-      uses: actions/setup-java@v4
-      with:
-        java-version: '21'
-        distribution: 'temurin'
-        cache: maven
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
-    - name: Make mvnw executable
-      run: chmod +x ./mvnw
-      working-directory: retail-store-sample-app/src/ui   
-    
-    - name: Build with Maven
-      run: ./mvnw -B verify
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: temurin
+          cache: maven
+          cache-dependency-path: retail-store-sample-app/src/ui/pom.xml
 
-  
-    - name: Set up Snyk CLI to check for security issues
-      uses: snyk/actions/setup@806182742461562b67788a64410098c9d9b96adb 
+      - name: Make Maven wrapper executable
+        run: chmod +x ./mvnw
 
-    - name: Run Snyk dependency scan
-      working-directory: retail-store-sample-app/src/ui
-      continue-on-error: true
-      run: snyk test --file=pom.xml -d
-      env:
-       SNYK_TOKEN: ${{ secrets.SNYK}}
+      - name: Build and test with Maven
+        run: ./mvnw -B verify
 
+      - name: Set up Snyk CLI
+        uses: snyk/actions/setup@806182742461562b67788a64410098c9d9b96adb
+
+      - name: Run advisory dependency scan
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK }}
+        run: snyk test --file=pom.xml
 
   build_and_push:
+    name: Build and publish UI to ECR
     needs: validation
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    environment: dev
+
     permissions:
       contents: read
+      id-token: write
 
     env:
-      IMAGE_TAG: sha-${{ github.sha }}
+      ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+      IMAGE_TAG: sha-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+    outputs:
+      image_uri: ${{ steps.publish.outputs.image_uri }}
+      image_digest: ${{ steps.publish.outputs.image_digest }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
-      - name: Check Docker
-        run: docker --version
+      - name: Check required configuration
+        env:
+          ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
+          REGION: ${{ vars.AWS_REGION }}
+        run: |
+          test -n "$ROLE_ARN" || {
+            echo "Missing dev variable AWS_ROLE_ARN"
+            exit 1
+          }
 
-      - name: Build Docker image
+          test -n "$REGION" || {
+            echo "Missing dev variable AWS_REGION"
+            exit 1
+          }
+
+          test -n "$ECR_REPOSITORY" || {
+            echo "Missing dev variable ECR_REPOSITORY"
+            exit 1
+          }
+
+      - name: Authenticate to AWS using OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: ui-publish-${{ github.run_id }}
+
+      - name: Verify AWS identity
+        run: aws sts get-caller-identity
+
+      - name: Confirm ECR repository exists
+        run: |
+          aws ecr describe-repositories \
+            --repository-names "$ECR_REPOSITORY" \
+            --query 'repositories[0].repositoryUri' \
+            --output text
+
+      - name: Log in to Amazon ECR
+        id: login_ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build UI image
         working-directory: retail-store-sample-app/src/ui
+        env:
+          REGISTRY: ${{ steps.login_ecr.outputs.registry }}
         run: |
           docker build \
-            -t retail-ui:$IMAGE_TAG .
+            --platform linux/amd64 \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            -t "$REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" \
+            .
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Tag Docker image
+      - name: Push image and record digest
+        id: publish
         env:
-          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          REGISTRY: ${{ steps.login_ecr.outputs.registry }}
         run: |
-          docker tag \
-            retail-ui:$IMAGE_TAG \
-            "$DOCKER_USERNAME/retail-ui:$IMAGE_TAG"
+          set -euo pipefail
 
-      - name: Push Docker image
-        env:
-          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-        run: |
-          docker push "$DOCKER_USERNAME/retail-ui:$IMAGE_TAG"
+          image_tag_uri="$REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          docker push "$image_tag_uri"
+
+          digest="$(aws ecr describe-images \
+            --repository-name "$ECR_REPOSITORY" \
+            --image-ids "imageTag=$IMAGE_TAG" \
+            --query 'imageDetails[0].imageDigest' \
+            --output text)"
+
+          if [[ ! "$digest" =~ ^sha256:[a-f0-9]{64}$ ]]; then
+            echo "Could not obtain a valid image digest"
+            exit 1
+          fi
+
+          image_uri="$REGISTRY/$ECR_REPOSITORY@$digest"
+
+          echo "image_uri=$image_uri" >> "$GITHUB_OUTPUT"
+          echo "image_digest=$digest" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "### UI image published to ECR"
+            echo
+            echo "- Source commit: $GITHUB_SHA"
+            echo "- Image tag: $image_tag_uri"
+            echo "- Deployment reference: $image_uri"
+            echo
+            echo "Published only. Dev/test deployment has not run."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       
 
