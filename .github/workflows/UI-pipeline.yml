@@ -11,6 +11,11 @@ on:
       - "!retail-store-sample-app/src/ui/chart/**"
       - ".github/workflows/UI-pipeline.yml"
 
+
+concurrency:
+  group: ui-real-promotion
+  cancel-in-progress: false   
+
 jobs:
   validation:
     name: Validate UI
@@ -167,6 +172,28 @@ jobs:
             echo "Published only. Dev/test deployment has not run."
           } >> "$GITHUB_STEP_SUMMARY"
 
-      
+  deploy_dev:
+    name: Deploy UI to dev
+    needs: build_and_push
+
+    permissions:
+      contents: read
+
+    uses: ./.github/workflows/deploy-ui-ssh.yml
+    with:
+      target_environment: dev
+      image_uri: ${{ needs.build_and_push.outputs.image_uri }}
+
+  deploy_test:
+    name: Promote UI to test
+    needs: [build_and_push, deploy_dev]
+
+    permissions:
+      contents: read
+
+    uses: ./.github/workflows/deploy-ui-ssh.yml
+    with:
+      target_environment: test
+      image_uri: ${{ needs.build_and_push.outputs.image_uri }}   
 
        
