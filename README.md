@@ -1,137 +1,106 @@
-# Retail Microservices on Amazon EKS
+# Enterprise Mobility Request Portal
 
-An EKS lab deploying five retail microservices with Terraform, Helm, Argo CD, GitHub Actions, and Kubernetes monitoring.
+A telecom project design for enterprise mobility administrators to request new connections, close lines and replace damaged devices. The reference journey is **a new mobile line with a device delivered to an approved address**.
 
-## Implemented scope
+The portal combines **EKS microservices**, **event-driven AWS processing** and **ServiceNow fulfilment**. Account managers approve or reject requests inside the application. Only an authorized transition to `APPROVED` starts ServiceNow ticket creation.
 
-- Terraform dev infrastructure in AWS us-east-2: VPC, EKS managed nodes, IAM configuration, and RDS configuration.
-- S3 Terraform state and an approval-gated saved-plan deployment workflow.
-- UI, catalog, cart, checkout, and orders deployed through separate Argo CD Applications.
-- UI exposure through an ALB; backend Services are internal.
-- HPA load-test evidence, Prometheus/Grafana dashboards, and CloudWatch evidence.
-- Checkout egress policy allowing orders and DNS, with allowed/blocked connectivity evidence.
-- UI CI builds commit-tagged Docker Hub images. Image selection and promotion are manual.
+> **Project scope:** This is a proposed Rogers-context business architecture supported by hands-on AWS labs. It is not an official Rogers system or evidence of access to Rogers production. The retained sample application demonstrates microservice operations; it does not implement the telecom business logic. The EKS lab was previously deployed and subsequently destroyed by the owner. Screenshots are historical evidence, not a current availability claim.
 
-Only dev is evidenced as deployed. Test, staging, and production Terraform directories are configuration, not proof of deployed environments. The application currently uses in-memory persistence; the RDS configuration does not establish that application data is stored in RDS.
+## Architecture
+
+![Enterprise Mobility Request Portal architecture](docs/architecture/enterprise-mobility-request-portal.png)
+
+[Editable diagram](docs/architecture/enterprise-mobility-request-portal.svg) · [Architecture and request lifecycle](docs/ARCHITECTURE.md)
+
+```text
+Enterprise user -> HTTPS ALB -> EKS request service -> S3 request JSON
+                                                       |
+                                                Validation Lambda
+                                                       |
+                                         DynamoDB: PENDING_APPROVAL
+                                                       ^
+Account manager -> application approval business logic -+
+                                                       |
+                                         DynamoDB Streams
+                                                       |
+                                   Integration Lambda: APPROVED only
+                                                       |
+                                   ServiceNow parent + fulfilment tasks
+                                      line / device assets / shipping
+
+ServiceNow -> authenticated API Gateway -> callback Lambda -> DynamoDB
+Portal Status API reads DynamoDB to display fulfilment progress.
+
+Failed asynchronous ingestion -> SQS DLQ -> CloudWatch alarm -> SNS -> support
+```
+
+## Business objectives
+
+- Give enterprise mobility teams a consistent, traceable request journey.
+- Validate account, product and delivery information before approval.
+- Enforce account-manager authorization before downstream fulfilment.
+- Coordinate line provisioning, device allocation and shipping under a parent request.
+- Display fulfilment progress without requiring customers to access internal tickets.
+- Retain failed backend work for investigation and controlled reprocessing.
+
+Success measures would include request completion time, approval age, fulfilment backlog, duplicate-task rate and processing failures. No measured business improvement is claimed.
+
+## Documentation
+
+| Topic | Guide |
+|---|---|
+| Business journey, microservices, AWS services and ServiceNow callbacks | [Architecture](docs/ARCHITECTURE.md) |
+| Git branching, GitHub workflows and Terraform deployment | [Terraform delivery](docs/TERRAFORM-DELIVERY.md) |
+| Dev, test, staging and production configuration | [Environments](docs/ENVIRONMENTS.md) |
+| Infrastructure release calendar, approval and recovery | [Release strategy](docs/RELEASE.md) |
+| Individual responsibilities and collaboration | [Teams](docs/TEAMS.md) |
+| Implemented evidence versus proposed work | [Deliverables](docs/DELIVERABLES.MD) |
+| Existing EKS screenshots and operations experiments | [Historical lab evidence](docs/LAB-EVIDENCE.md) |
+| Short presentation narrative | [Presentation notes](docs/PRESENTATION.md) |
+
+The delivery documentation covers **Terraform infrastructure as code only**. Application-image build/promotion experiments remain in the repository but are outside this presentation's delivery narrative.
+
+## Terraform infrastructure delivery
+
+```text
+Short-lived branch -> PR -> validation + TFLint -> reviewed merge to main
+    -> manually start dev workflow -> generate and save dev plan
+    -> review plan -> dev-apply approval -> verify checksum -> apply same plan
+```
+
+Configured workflows:
+
+- [Terraform PR Checks](.github/workflows/terraform-pr-checks.yml): validates all four environment directories and runs TFLint. Formatting and Checkov currently run as advisory checks.
+- [Terraform Environment Plan](.github/workflows/Terraform-plan.yaml): manually plans a selected environment; does not apply it.
+- [Terraform Dev Deployment](.github/workflows/terraform-dev-deploy.yml): manually generates a saved dev plan, stores it in S3 and applies it through the separate `dev-apply` job when enabled and changes exist. Required reviewers must be configured in GitHub environment settings.
+
+**Current versus target:** A dev saved-plan workflow is implemented. Test/staging/production apply pipelines and automatic infrastructure promotion are not implemented. The target promotes reviewed code versions, with a new plan and release decision for each environment; it never reuses dev's plan or state in production.
 
 ## Repository layout
 
-| Path | Purpose |
+```text
+Infra/
+  environments/{dev,test,staging,production}/
+  modules/{vpc,rds}/
+.github/workflows/                    # Existing workflows; see delivery inventory
+docs/architecture/                    # Presentation diagram PNG + editable SVG
+docs/                                 # Architecture, delivery and evidence
+retail-store-sample-app/               # Retained microservice demonstration source
+```
+
+The infrastructure retains its existing resource names and backend keys. The project title does not rename Terraform-managed resources or migrate state. The GitHub repository URL remains `mreddi8997/EKS-application`; changing its slug requires checking OIDC trust and existing references.
+
+## Implementation boundary
+
+| Area | Status |
 |---|---|
-| `Infra/environments/` | dev, test, staging, and production Terraform configuration |
-| `Infra/modules/` | Shared VPC and RDS modules |
-| `.github/workflows/` | Infrastructure and per-service CI workflows |
-| `retail-store-sample-app/src/<service>/chart/` | Service Helm charts |
-| [docs/DELIVERABLES.MD](docs/DELIVERABLES.MD) | Deployment evidence and completion checklist |
-| [docs/RELEASE.md](docs/RELEASE.md) | Build, manual image promotion, and rollback procedure |
-| [Monitoring incident](docs/incident%20troubleshooting) | Investigation and observed recovery |
-| [Dashboard JSON](docs/dashboards/kubernetes-cluster-6417.json) | Exported Grafana dashboard |
+| VPC, private EKS API, managed nodes, IAM access and RDS | Terraform configuration present; historical dev deployment evidence |
+| S3 remote Terraform state and native locking | Configured with separate environment state keys |
+| Saved-plan dev infrastructure deployment | Implemented GitHub Actions workflow and historical successful run |
+| S3 -> Lambda -> DynamoDB ingestion, lookup API, DLQ alerting | Demonstrated separately in the [serverless companion repository](https://github.com/mreddi8997/Serverless-Event-Driven-Data-Pipeline-on-AWS) for software-licence requests |
+| New-line validation, in-application approval and tenant authorization | Proposed telecom application implementation |
+| Approval-filtered DynamoDB Streams -> ServiceNow integration | Proposed integration; not implemented by existing retail code |
+| ServiceNow callbacks and end-to-end telecom fulfilment | Proposed integration |
+| Route 53, HTTPS, SSO and production readiness in the diagram | Target architecture; not all provisioned by this repository |
 
-## Prerequisites and cluster access
-
-Use AWS CLI, Terraform 1.10 or newer below 2.0, kubectl, Helm, and an authorized AWS identity. The committed provider lock files determine provider versions.
-
-The dev EKS API endpoint is private. Run Kubernetes and Helm commands from a host with network access to the VPC and an authorized EKS access entry.
-
-```bash
-git clone https://github.com/mreddi8997/EKS-application.git
-cd EKS-application
-aws sts get-caller-identity
-aws eks update-kubeconfig --region us-east-2 --name eks-application-dev
-kubectl get nodes
-kubectl get pods -A
-```
-
-## Infrastructure deployment
-
-The existing S3 backend is configured in `Infra/environments/dev/backend.tf`. The bucket, GitHub OIDC roles, and GitHub environment configuration must exist before running the deployment workflow.
-
-For local review:
-
-```bash
-terraform -chdir=Infra/environments/dev init -lockfile=readonly
-terraform -chdir=Infra/environments/dev validate
-terraform -chdir=Infra/environments/dev plan
-```
-
-For the repository deployment process:
-
-1. Open Actions → Terraform Dev Deployment → Run workflow on main.
-2. Leave apply disabled for a plan-only review.
-3. To deploy, run with apply enabled and review the generated saved plan.
-4. Approve the dev-apply environment when the plan is acceptable.
-5. The apply job downloads and checks the saved plan before applying it.
-
-Configure GitHub environments `dev` and `dev-apply` with `AWS_ROLE_ARN` and `AWS_REGION`. Configure required reviewers for dev-apply. The workflow uses OIDC rather than static AWS access keys.
-
-## Helm and Argo CD
-
-Argo CD renders the service Helm charts and owns application reconciliation. Do not install a second Helm-managed copy over the same Argo CD-managed resources.
-
-Inspect existing configuration before making changes:
-
-```bash
-kubectl get applications -n argocd
-helm list -A
-helm lint retail-store-sample-app/src/ui/chart
-helm template ui retail-store-sample-app/src/ui/chart --namespace ui
-```
-
-For a separate lab installation, the following is a command pattern, not an export of the live deployment:
-
-```bash
-helm upgrade --install ui retail-store-sample-app/src/ui/chart \
-  --namespace ui-lab --create-namespace \
-  --values /path/to/reviewed-ui-values.yaml
-```
-
-The values must supply the intended image, cross-namespace service endpoints, ingress, and scaling settings. Live Application definitions and environment values were entered through Argo CD and are not yet fully committed. Export and review them before claiming a reproducible deployment from Git alone.
-
-## Monitoring installation
-
-Prometheus and Grafana were installed using kube-prometheus-stack. Before changing the existing release, record its name, chart version, values, PVCs, and storage configuration:
-
-```bash
-helm list -n monitoring
-kubectl get pods,pvc -n monitoring
-kubectl get storageclass
-```
-
-For a fresh lab, the installation command pattern is:
-
-```bash
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-helm repo update
-helm upgrade --install monitoring prometheus-community/kube-prometheus-stack \
-  --namespace monitoring --create-namespace \
-  --version <reviewed-chart-version> \
-  --values /path/to/reviewed-monitoring-values.yaml
-```
-
-Replace the placeholders with reviewed settings. This is not a reconstruction of the original install command. The current persistent storage and node-exporter ServiceMonitor settings still need export into Git.
-
-## CI and releases
-
-See [the release guide](docs/RELEASE.md) for workflow triggers, required secrets, manual promotion, and rollout verification.
-
-The UI workflow validates pull requests and publishes SHA-tagged images only from main. Other microservice workflows retain their existing manual triggers and run-number tags. No automated image-update bot is configured.
-
-## Evidence
-
-![Retail application](docs/screenshots/retail-ui.png)
-
-![Grafana pod metrics](docs/screenshots/grafana-pod-metrics.png)
-
-![HPA load test](docs/screenshots/hpa-scaling.png)
-
-The complete evidence set is in [Project Deliverables](docs/DELIVERABLES.MD). Screenshots describe the state at capture time and do not confirm current live availability.
-
-## Remaining acceptance gaps
-
-- Original requirements specify ECR and a k8s/ directory; this project currently uses Docker Hub and Helm templates.
-- Commit reviewed Argo CD Applications, environment values, monitoring values, and network policy YAML.
-- Verify OIDC provisioning ownership and whether the ECR requirement must still be implemented.
-- Confirm HPA evidence shows the exact required transition from 2 to at least 5 replicas.
-- Capture a successful UI SHA-image publish and corresponding deployment verification after merging.
-- Verify Grafana screenshots visibly include CPU, memory, and restart counts.
-- Multi-environment promotion, HTTPS, and persistent application databases remain future work.
+Do not run a Terraform apply simply to view this project. Deployment requires the intended AWS account, existing backend, OIDC roles, permissions and an explicit review of the plan; it creates chargeable resources.

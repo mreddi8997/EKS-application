@@ -1,0 +1,190 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="1520" viewBox="0 0 2400 1520">
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#526379"/></marker></defs>
+<rect width="2400" height="1520" fill="white"/>
+<style>text{font-family:Arial,sans-serif;fill:#182b43} .title{font-size:42px;font-weight:700}.sub{font-size:22px;fill:#56677c}.lane{font-size:26px;font-weight:700}.label{font-size:21px;font-weight:700}.note{font-size:18px;fill:#526379}.edge{fill:none;stroke:#526379;stroke-width:2.7;marker-end:url(#arrow)}</style>
+<text x="45" y="62" class="title" text-anchor="start">Enterprise Mobility Request Portal</text>
+<text x="45" y="101" class="sub" text-anchor="start">New mobile line + device delivery | Approval in application | AWS-style service symbols</text>
+<rect x="30" y="130" width="2340" height="650" rx="14" fill="#f2f7fd" stroke="#dce4ee"/>
+<text x="55" y="169" class="lane" text-anchor="start">1  Submit, validate and approve in the application</text>
+<rect x="65" y="205" width="245" height="140" rx="12" fill="white" stroke="#cbd5e1" stroke-width="2"/>
+<rect x="83" y="224" width="54" height="54" rx="5" fill="#526379"/>
+<circle cx="110" cy="241" r="8" fill="none" stroke="white" stroke-width="2"/><path d="M95 267v-5c0-18 30-18 30 0v5Z" fill="none" stroke="white" stroke-width="2"/>
+<text x="149" y="241" class="label" text-anchor="start">Enterprise</text>
+<text x="149" y="266" class="label" text-anchor="start">mobility user</text>
+<text x="83" y="308" class="note" text-anchor="start">Corporate SSO</text>
+<text x="83" y="331" class="note" text-anchor="start">Tenant-scoped access</text>
+<rect x="355" y="205" width="245" height="140" rx="12" fill="white" stroke="#cbd5e1" stroke-width="2"/>
+<rect x="373" y="224" width="54" height="54" rx="5" fill="#8650c9"/>
+<rect x="385" y="236" width="30" height="30" fill="none" stroke="white" stroke-width="2"/><path d="M391 245h18M391 252h18M391 259h12" stroke="white" stroke-width="2"/>
+<text x="439" y="241" class="label" text-anchor="start">ALB + Route 53</text>
+<text x="373" y="308" class="note" text-anchor="start">HTTPS entry point</text>
+<text x="373" y="331" class="note" text-anchor="start">Route 53 resolves DNS</text>
+<rect x="645" y="205" width="245" height="140" rx="12" fill="white" stroke="#cbd5e1" stroke-width="2"/>
+<rect x="663" y="224" width="54" height="54" rx="5" fill="#e88a13"/>
+<rect x="675" y="236" width="30" height="30" fill="none" stroke="white" stroke-width="2"/><path d="M681 245h18M681 252h18M681 259h12" stroke="white" stroke-width="2"/>
+<text x="729" y="241" class="label" text-anchor="start">Amazon EKS</text>
+<text x="663" y="308" class="note" text-anchor="start">UI + request API</text>
+<text x="663" y="331" class="note" text-anchor="start">Approval business logic</text>
+<rect x="935" y="205" width="245" height="140" rx="12" fill="white" stroke="#cbd5e1" stroke-width="2"/>
+<rect x="953" y="224" width="54" height="54" rx="5" fill="#438a2c"/>
+<path d="M965 239v26c0 9 30 9 30 0v-26M965 251c0 9 30 9 30 0M965 262c0 9 30 9 30 0" fill="none" stroke="white" stroke-width="2"/><ellipse cx="980" cy="239" rx="15" ry="6" fill="none" stroke="white" stroke-width="2"/>
+<text x="1019" y="241" class="label" text-anchor="start">Amazon S3</text>
+<text x="953" y="308" class="note" text-anchor="start">Original form JSON</text>
+<text x="953" y="331" class="note" text-anchor="start">Immutable submission</text>
+<rect x="1225" y="205" width="245" height="140" rx="12" fill="white" stroke="#cbd5e1" stroke-width="2"/>
+<rect x="1243" y="224" width="54" height="54" rx="5" fill="#e88a13"/>
+<text x="1270" y="264" text-anchor="middle" style="font:44px Arial;fill:white">λ</text>
+<text x="1309" y="241" class="label" text-anchor="start">Validation</text>
+<text x="1309" y="266" class="label" text-anchor="start">Lambda</text>
+<text x="1243" y="308" class="note" text-anchor="start">Parse + validate</text>
+<text x="1243" y="331" class="note" text-anchor="start">Create tracking record</text>
+<rect x="1515" y="205" width="245" height="140" rx="12" fill="white" stroke="#cbd5e1" stroke-width="2"/>
+<rect x="1533" y="224" width="54" height="54" rx="5" fill="#2869c7"/>
+<path d="M1545 239v26c0 9 30 9 30 0v-26M1545 251c0 9 30 9 30 0M1545 262c0 9 30 9 30 0" fill="none" stroke="white" stroke-width="2"/><ellipse cx="1560" cy="239" rx="15" ry="6" fill="none" stroke="white" stroke-width="2"/>
+<text x="1599" y="241" class="label" text-anchor="start">DynamoDB</text>
+<text x="1533" y="308" class="note" text-anchor="start">Current request status</text>
+<text x="1533" y="331" class="note" text-anchor="start">PENDING_APPROVAL</text>
+<rect x="1805" y="205" width="245" height="140" rx="12" fill="white" stroke="#cbd5e1" stroke-width="2"/>
+<rect x="1823" y="224" width="54" height="54" rx="5" fill="#2869c7"/>
+<path d="M1835 239v26c0 9 30 9 30 0v-26M1835 251c0 9 30 9 30 0M1835 262c0 9 30 9 30 0" fill="none" stroke="white" stroke-width="2"/><ellipse cx="1850" cy="239" rx="15" ry="6" fill="none" stroke="white" stroke-width="2"/>
+<text x="1889" y="241" class="label" text-anchor="start">RDS PostgreSQL</text>
+<text x="1823" y="308" class="note" text-anchor="start">Account + catalog data</text>
+<text x="1823" y="331" class="note" text-anchor="start">Used by EKS services</text>
+<rect x="2095" y="205" width="245" height="140" rx="12" fill="white" stroke="#cbd5e1" stroke-width="2"/>
+<rect x="2113" y="224" width="54" height="54" rx="5" fill="#b33b47"/>
+<rect x="2125" y="236" width="30" height="30" fill="none" stroke="white" stroke-width="2"/><path d="M2131 245h18M2131 252h18M2131 259h12" stroke="white" stroke-width="2"/>
+<text x="2179" y="241" class="label" text-anchor="start">Secrets Manager</text>
+<text x="2113" y="308" class="note" text-anchor="start">ServiceNow credentials</text>
+<text x="2113" y="331" class="note" text-anchor="start">IAM + KMS protection</text>
+<path d="M310 275 L355 275" class="edge"/>
+<path d="M600 275 L645 275" class="edge"/>
+<path d="M890 275 L935 275" class="edge"/>
+<path d="M1180 275 L1225 275" class="edge"/>
+<path d="M1470 275 L1515 275" class="edge"/>
+<path d="M1805 358 L820 358 L820 345" class="edge" stroke-dasharray="8 6"/>
+<text x="960" y="188" class="note" text-anchor="start">S3 ObjectCreated → asynchronous invocation</text>
+<path d="M715 345 L715 405 L1580 405 L1580 345" class="edge"/>
+<text x="755" y="395" class="note" text-anchor="start">Account manager approves/rejects in portal → authorized conditional update</text>
+<path d="M1700 345 L1700 465 L187 465 L187 520" class="edge"/>
+<text x="1070" y="455" class="note" text-anchor="start">Record changes feed DynamoDB Streams</text>
+<rect x="65" y="520" width="245" height="140" rx="12" fill="white" stroke="#cbd5e1" stroke-width="2"/>
+<rect x="83" y="539" width="54" height="54" rx="5" fill="#2869c7"/>
+<path d="M95 554v26c0 9 30 9 30 0v-26M95 566c0 9 30 9 30 0M95 577c0 9 30 9 30 0" fill="none" stroke="white" stroke-width="2"/><ellipse cx="110" cy="554" rx="15" ry="6" fill="none" stroke="white" stroke-width="2"/>
+<text x="149" y="556" class="label" text-anchor="start">DynamoDB</text>
+<text x="149" y="581" class="label" text-anchor="start">Streams</text>
+<text x="83" y="623" class="note" text-anchor="start">Old + new record images</text>
+<text x="83" y="646" class="note" text-anchor="start">Request status changes</text>
+<rect x="355" y="520" width="245" height="140" rx="12" fill="white" stroke="#cbd5e1" stroke-width="2"/>
+<rect x="373" y="539" width="54" height="54" rx="5" fill="#e88a13"/>
+<text x="400" y="579" text-anchor="middle" style="font:44px Arial;fill:white">λ</text>
+<text x="439" y="556" class="label" text-anchor="start">ServiceNow</text>
+<text x="439" y="581" class="label" text-anchor="start">Lambda</text>
+<text x="373" y="623" class="note" text-anchor="start">Check APPROVED transition</text>
+<text x="373" y="646" class="note" text-anchor="start">Recheck current state</text>
+<path d="M310 590 L355 590" class="edge"/>
+<rect x="730" y="510" width="900" height="215" rx="12" fill="white" stroke="#83ad99" stroke-width="2"/>
+<text x="755" y="545" class="lane" text-anchor="start">ServiceNow — parent request and fulfilment tasks</text>
+<rect x="755" y="565" width="260" height="140" rx="12" fill="white" stroke="#cbd5e1" stroke-width="2"/>
+<rect x="773" y="584" width="54" height="54" rx="5" fill="#43886b"/>
+<rect x="785" y="596" width="30" height="30" fill="none" stroke="white" stroke-width="2"/><path d="M791 605h18M791 612h18M791 619h12" stroke="white" stroke-width="2"/>
+<text x="839" y="601" class="label" text-anchor="start">Line team</text>
+<text x="773" y="668" class="note" text-anchor="start">Provision connection</text>
+<text x="773" y="691" class="note" text-anchor="start">Record outcome</text>
+<rect x="1045" y="565" width="260" height="140" rx="12" fill="white" stroke="#cbd5e1" stroke-width="2"/>
+<rect x="1063" y="584" width="54" height="54" rx="5" fill="#43886b"/>
+<rect x="1075" y="596" width="30" height="30" fill="none" stroke="white" stroke-width="2"/><path d="M1081 605h18M1081 612h18M1081 619h12" stroke="white" stroke-width="2"/>
+<text x="1129" y="601" class="label" text-anchor="start">Asset team</text>
+<text x="1063" y="668" class="note" text-anchor="start">Allocate mobile device</text>
+<text x="1063" y="691" class="note" text-anchor="start">Record device / SIM</text>
+<rect x="1335" y="565" width="270" height="140" rx="12" fill="white" stroke="#cbd5e1" stroke-width="2"/>
+<rect x="1353" y="584" width="54" height="54" rx="5" fill="#43886b"/>
+<rect x="1365" y="596" width="30" height="30" fill="none" stroke="white" stroke-width="2"/><path d="M1371 605h18M1371 612h18M1371 619h12" stroke="white" stroke-width="2"/>
+<text x="1419" y="601" class="label" text-anchor="start">Shipping team</text>
+<text x="1353" y="668" class="note" text-anchor="start">Ship allocated device</text>
+<text x="1353" y="691" class="note" text-anchor="start">Approved delivery address</text>
+<path d="M600 565 L675 565 L675 540 L730 540" class="edge"/>
+<text x="610" y="523" class="note" text-anchor="start">APPROVED only</text>
+<rect x="1750" y="525" width="560" height="150" rx="12" fill="#fff3f1" stroke="#e5aaa2"/>
+<text x="1775" y="564" class="label" text-anchor="start">REJECTED / PENDING_APPROVAL</text>
+<text x="1775" y="600" class="note" text-anchor="start">No ServiceNow request or fulfilment tickets.</text>
+<text x="1775" y="631" class="note" text-anchor="start">Lambda ignores these status changes.</text>
+<text x="65" y="753" class="note" text-anchor="start">Shipping waits for device allocation. Request IDs + reconciliation prevent duplicate ServiceNow work.</text>
+<rect x="30" y="805" width="2340" height="245" rx="14" fill="#f5f4fb" stroke="#dce4ee"/>
+<text x="55" y="844" class="lane" text-anchor="start">2  ServiceNow returns progress; the portal displays status</text>
+<rect x="65" y="875" width="245" height="140" rx="12" fill="white" stroke="#cbd5e1" stroke-width="2"/>
+<rect x="83" y="894" width="54" height="54" rx="5" fill="#43886b"/>
+<rect x="95" y="906" width="30" height="30" fill="none" stroke="white" stroke-width="2"/><path d="M101 915h18M101 922h18M101 929h12" stroke="white" stroke-width="2"/>
+<text x="149" y="911" class="label" text-anchor="start">ServiceNow</text>
+<text x="83" y="978" class="note" text-anchor="start">Task status changes</text>
+<text x="83" y="1001" class="note" text-anchor="start">Shipping reference</text>
+<rect x="500" y="875" width="245" height="140" rx="12" fill="white" stroke="#cbd5e1" stroke-width="2"/>
+<rect x="518" y="894" width="54" height="54" rx="5" fill="#8650c9"/>
+<rect x="530" y="906" width="30" height="30" fill="none" stroke="white" stroke-width="2"/><path d="M536 915h18M536 922h18M536 929h12" stroke="white" stroke-width="2"/>
+<text x="584" y="911" class="label" text-anchor="start">API Gateway</text>
+<text x="518" y="978" class="note" text-anchor="start">Authenticated webhook</text>
+<text x="518" y="1001" class="note" text-anchor="start">Validate source + replay</text>
+<rect x="935" y="875" width="245" height="140" rx="12" fill="white" stroke="#cbd5e1" stroke-width="2"/>
+<rect x="953" y="894" width="54" height="54" rx="5" fill="#e88a13"/>
+<text x="980" y="934" text-anchor="middle" style="font:44px Arial;fill:white">λ</text>
+<text x="1019" y="911" class="label" text-anchor="start">Callback</text>
+<text x="1019" y="936" class="label" text-anchor="start">Lambda</text>
+<text x="953" y="978" class="note" text-anchor="start">Check correlation ID</text>
+<text x="953" y="1001" class="note" text-anchor="start">Validate state transition</text>
+<rect x="1370" y="875" width="245" height="140" rx="12" fill="white" stroke="#cbd5e1" stroke-width="2"/>
+<rect x="1388" y="894" width="54" height="54" rx="5" fill="#2869c7"/>
+<path d="M1400 909v26c0 9 30 9 30 0v-26M1400 921c0 9 30 9 30 0M1400 932c0 9 30 9 30 0" fill="none" stroke="white" stroke-width="2"/><ellipse cx="1415" cy="909" rx="15" ry="6" fill="none" stroke="white" stroke-width="2"/>
+<text x="1454" y="911" class="label" text-anchor="start">DynamoDB</text>
+<text x="1388" y="978" class="note" text-anchor="start">Same request table</text>
+<text x="1388" y="1001" class="note" text-anchor="start">Fulfilment task status</text>
+<rect x="1805" y="875" width="245" height="140" rx="12" fill="white" stroke="#cbd5e1" stroke-width="2"/>
+<rect x="1823" y="894" width="54" height="54" rx="5" fill="#e88a13"/>
+<rect x="1835" y="906" width="30" height="30" fill="none" stroke="white" stroke-width="2"/><path d="M1841 915h18M1841 922h18M1841 929h12" stroke="white" stroke-width="2"/>
+<text x="1889" y="911" class="label" text-anchor="start">EKS Status API</text>
+<text x="1823" y="978" class="note" text-anchor="start">Authorize request lookup</text>
+<text x="1823" y="1001" class="note" text-anchor="start">Customer progress view</text>
+<path d="M310 945 L500 945" class="edge"/>
+<path d="M745 945 L935 945" class="edge"/>
+<path d="M1180 945 L1370 945" class="edge"/>
+<path d="M1615 945 L1805 945" class="edge"/>
+<rect x="30" y="1075" width="2340" height="240" rx="14" fill="#fdf2f1" stroke="#dce4ee"/>
+<text x="55" y="1114" class="lane" text-anchor="start">3  Failed ingestion → support alert</text>
+<rect x="65" y="1145" width="245" height="140" rx="12" fill="white" stroke="#cbd5e1" stroke-width="2"/>
+<rect x="83" y="1164" width="54" height="54" rx="5" fill="#e88a13"/>
+<text x="110" y="1204" text-anchor="middle" style="font:44px Arial;fill:white">λ</text>
+<text x="149" y="1181" class="label" text-anchor="start">Validation</text>
+<text x="149" y="1206" class="label" text-anchor="start">Lambda</text>
+<text x="83" y="1248" class="note" text-anchor="start">Processing exception</text>
+<text x="83" y="1271" class="note" text-anchor="start">Async retries exhausted</text>
+<rect x="500" y="1145" width="245" height="140" rx="12" fill="white" stroke="#cbd5e1" stroke-width="2"/>
+<rect x="518" y="1164" width="54" height="54" rx="5" fill="#c43e86"/>
+<rect x="530" y="1176" width="30" height="30" fill="none" stroke="white" stroke-width="2"/><path d="M536 1185h18M536 1192h18M536 1199h12" stroke="white" stroke-width="2"/>
+<text x="584" y="1181" class="label" text-anchor="start">SQS DLQ</text>
+<text x="518" y="1248" class="note" text-anchor="start">Failed S3 event reference</text>
+<text x="518" y="1271" class="note" text-anchor="start">Original JSON stays in S3</text>
+<rect x="935" y="1145" width="245" height="140" rx="12" fill="white" stroke="#cbd5e1" stroke-width="2"/>
+<rect x="953" y="1164" width="54" height="54" rx="5" fill="#c43e86"/>
+<rect x="965" y="1176" width="30" height="30" fill="none" stroke="white" stroke-width="2"/><path d="M971 1185h18M971 1192h18M971 1199h12" stroke="white" stroke-width="2"/>
+<text x="1019" y="1181" class="label" text-anchor="start">CloudWatch</text>
+<text x="953" y="1248" class="note" text-anchor="start">Visible DLQ messages &gt; 0</text>
+<text x="953" y="1271" class="note" text-anchor="start">Alarm state change</text>
+<rect x="1370" y="1145" width="245" height="140" rx="12" fill="white" stroke="#cbd5e1" stroke-width="2"/>
+<rect x="1388" y="1164" width="54" height="54" rx="5" fill="#c43e86"/>
+<rect x="1400" y="1176" width="30" height="30" fill="none" stroke="white" stroke-width="2"/><path d="M1406 1185h18M1406 1192h18M1406 1199h12" stroke="white" stroke-width="2"/>
+<text x="1454" y="1181" class="label" text-anchor="start">Amazon SNS</text>
+<text x="1388" y="1248" class="note" text-anchor="start">Confirmed email</text>
+<text x="1388" y="1271" class="note" text-anchor="start">Support subscription</text>
+<rect x="1805" y="1145" width="245" height="140" rx="12" fill="white" stroke="#cbd5e1" stroke-width="2"/>
+<rect x="1823" y="1164" width="54" height="54" rx="5" fill="#526379"/>
+<circle cx="1850" cy="1181" r="8" fill="none" stroke="white" stroke-width="2"/><path d="M1835 1207v-5c0-18 30-18 30 0v5Z" fill="none" stroke="white" stroke-width="2"/>
+<text x="1889" y="1181" class="label" text-anchor="start">Support team</text>
+<text x="1823" y="1248" class="note" text-anchor="start">Inspect, correct, replay</text>
+<text x="1823" y="1271" class="note" text-anchor="start">Preserve request identity</text>
+<path d="M310 1215 L500 1215" class="edge"/>
+<path d="M745 1215 L935 1215" class="edge"/>
+<path d="M1180 1215 L1370 1215" class="edge"/>
+<path d="M1615 1215 L1805 1215" class="edge"/>
+<text x="50" y="1363" class="label" text-anchor="start">Approval status is separate from fulfilment status. Only an authorized APPROVED transition starts ticket creation.</text>
+<text x="50" y="1403" class="note" text-anchor="start">S3 events ingest the form; DynamoDB Streams drive the approval-gated ServiceNow integration. Pending is not approved.</text>
+<text x="50" y="1436" class="note" text-anchor="start">CloudWatch alerts on transition to ALARM, not once per DLQ message. Stream processing needs bounded retries and failure handling.</text>
+<text x="50" y="1469" class="note" text-anchor="start">Proposed Rogers-context design. AWS service symbols are illustrative. Normal user input errors return validation feedback.</text>
+</svg>

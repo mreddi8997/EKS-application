@@ -1,90 +1,65 @@
-# UI build and manual image promotion
+# Terraform infrastructure release strategy and calendar
 
-## Current behavior
+This guide covers **Terraform IaC releases only**. It does not describe application-image promotion.
 
-The UI workflow validates UI code changes on pull requests into main and on pushes to main. Manual dispatch is also available. Chart-only changes are excluded from the UI image workflow.
+## Release policy
 
-Validation uses Java 21 and the Maven wrapper's verify phase. Snyk scanning remains advisory because continue-on-error is enabled.
+Integrate small reviewed infrastructure changes into `main`. Select an immutable tested commit/module version for a controlled infrastructure release. A release record should include:
 
-After validation, Docker image publication runs only when the selected ref is main and the event is not a pull request. Manual dispatch on a feature branch validates without publishing. Image promotion remains manual; the workflow does not edit Helm values or create deployment branches.
+- Release identifier, exact commit and affected environment(s).
+- Resource impact, cost/capacity implications and planned destructions.
+- Terraform/provider/module versions and validation evidence.
+- Fresh environment-specific plan, checksum and workflow/run reference.
+- Required approvals, deployment window, owner and support coverage.
+- Verification steps, recovery options and actual result.
 
-Other service CI workflows still use their existing manual triggers and run-number tags. The SHA convention documented here applies to UI.
+Never reuse a lower-environment plan or state in production. Re-plan if the selected configuration or infrastructure state changes materially before apply.
 
-## Required secrets
+## Current implementation versus operating target
 
-- DOCKER_USERNAME: Docker Hub namespace used for retail-ui.
-- DOCKER_PASSWORD: Docker Hub access token with write access to that repository.
-- SNYK: Token used by the existing advisory dependency scan.
+The repository implements manual dev saved-plan deployment and manual plan-only execution for all four environments. The complete staging/production saved-plan apply and release-calendar automation is **not implemented**. The process below is the target operating model.
 
-GitHub Packages write permission is not required for Docker Hub. The workflow needs repository contents read permission.
+The current dev run uses its `main` revision. Releasing an older tested commit later requires an explicitly designed release-ref workflow; tagging a commit alone does not make the existing workflow deploy it.
 
-## Build an image
+## Illustrative monthly calendar
 
-1. Open a feature PR containing UI code changes.
-2. Review the validation results and merge into main.
-3. Wait for the main workflow's build_and_push job to succeed.
-4. Record the complete source commit SHA.
+| Timing | Activity | Responsible participants |
+|---|---|---|
+| Throughout month | Small PRs, configuration validation and development verification | Developers, platform engineer, reviewers |
+| Five business days before window | Select candidate commit and confirm infrastructure scope | Release manager, platform lead |
+| Four to two business days before | Verify selected changes in test/staging with fresh plans | Platform, QA, security and service owners |
+| One business day before | Go/no-go: plan, risks, recovery, support readiness and change record | Release manager and authorized approvers |
+| Agreed month-end staffed window | Generate/review final production plan, approve and apply that plan | Platform operator, independent approver |
+| Following business day | Review health, drift/incident findings and follow-up actions | Operations and platform teams |
 
-The published reference is:
+This is an example calendar, not a Rogers schedule. Choose a staffed low-impact window; avoid critical onboarding, store and enterprise service periods. Defer an unready release rather than deploying solely to meet the date.
 
-```text
-<dockerhub-username>/retail-ui:sha-<full-main-commit-sha>
-```
+## Approval decisions
 
-Do not use the feature branch commit SHA if the merge produced a different commit. Do not overwrite a published release tag. Record the registry digest as release evidence.
+1. **PR review:** Is the infrastructure change correct and adequately validated?
+2. **Plan review:** Does this exact environment plan reflect the authorized impact?
+3. **Release approval:** Is it appropriate to execute now, with support and recovery ready?
+4. **Post-apply acceptance:** Did the intended resources and controls reach the verified state?
 
-## Promote the image manually
+These decisions are distinct. The existing main ruleset's required review count is zero; independent PR approval is a target policy. The existing dev workflow references `dev-apply`, but required reviewers must be configured in environment settings.
 
-The current Argo CD image settings may be UI-entered overrides. Before moving image management to Git:
+## Infrastructure recovery
 
-1. Export each Application and its current Helm configuration.
-2. Review and commit environment values, including endpoints, ingress, and autoscaling.
-3. Configure the Application to read its environment values file.
-4. Remove conflicting image parameters or inline overrides.
-5. Render and compare the desired manifests before syncing.
+Terraform has no universal transactional undo. A code revert alone does not restore deployed infrastructure.
 
-A proposed file is `retail-store-sample-app/src/ui/chart/values-dev.yaml`; it is not created by this guide because live settings have not been exported.
+1. Stop further environment progression and preserve logs, the plan and state history.
+2. Inspect which resource operations completed and compare actual infrastructure with state.
+3. Decide whether to fix forward or revert compatible configuration.
+4. Generate a new recovery plan against current state.
+5. Review destructive impact and obtain the required approval.
+6. Apply that exact recovery plan and verify resources and dependent services.
 
-Once Git-managed environment values are configured:
+Use database snapshots/restore procedures for data recovery when required. Never automatically replace a newer Terraform state with an older object as a routine rollback. State recovery is a separate, controlled investigation. Account for resources already deleted or replaced.
 
-1. Create a branch from current main.
-2. Change image.repository to the Docker Hub repository and image.tag to the published SHA tag.
-3. Render the chart with that environment's values and review the diff.
-4. Open and merge a configuration PR.
-5. Argo CD auto-sync deploys the change if enabled; otherwise request Sync.
-6. Verify Application sync/health, rollout status, and the application response.
+## Emergency change
 
-Example rendering and verification commands:
+Use a focused fix branch, expedited review, targeted validation and recorded emergency approval. When unreleased changes exist on main, prepare the fix from the appropriate released baseline and reconcile it back to main. Generate fresh plans for every affected environment. Complete post-change verification and retrospective review.
 
-```bash
-helm template ui retail-store-sample-app/src/ui/chart \
-  --namespace ui \
-  --values retail-store-sample-app/src/ui/chart/values-dev.yaml
+## Release-manager presentation answer
 
-kubectl get deployments -n ui
-kubectl rollout status deployment/<actual-ui-deployment-name> \
-  -n ui --timeout=300s
-kubectl get pods -n ui
-kubectl get deployments -n ui \
-  -o jsonpath='{range .items[*]}{.metadata.name}{": "}{.spec.template.spec.containers[*].image}{"\n"}{end}'
-```
-
-A successful push is not proof of successful deployment. Capture the workflow result, the deployed image reference, rollout result, and a smoke test.
-
-Chart-only changes need a separate Helm validation check before merge; exclusion from the image build is not validation.
-
-## Future environment promotion
-
-Build once and select the same image for dev, test, staging, and production. Update only the destination environment's image reference through a PR. Keep environment-specific endpoints and secrets separate.
-
-Use approval for production promotion. Pin reviewed chart versions as well as images so shared chart changes do not bypass release approval. The repository does not yet demonstrate deployed test, staging, or production environments.
-
-The existing Deployment template supports image tags, not a separate digest field. Digest pinning requires an explicit chart change and validation.
-
-## Rollback
-
-Record the previously deployed image before promotion. To roll back, revert the image configuration change through Git and let Argo CD reconcile it, then repeat health and smoke-test checks.
-
-For the current UI-managed configuration, restore the recorded previous image override and sync; move these changes into Git when the Application configuration is exported.
-
-Image rollback does not reverse database migrations. Review schema compatibility separately.
+“We integrate Terraform changes through short-lived branches and required checks. Dev uses a saved plan with a separate apply decision. Our target release process selects a tested immutable infrastructure revision and creates a fresh plan for each environment. Production changes execute in a staffed release window after plan and release approval. If a change fails, we inspect actual state and choose an approved recovery plan rather than assuming Terraform can automatically undo it.”
