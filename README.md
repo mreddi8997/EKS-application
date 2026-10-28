@@ -4,7 +4,7 @@ A telecom project design for enterprise mobility administrators to request new c
 
 The portal combines **EKS microservices**, **event-driven AWS processing** and **ServiceNow fulfilment**. Account managers approve or reject requests inside the application. Only an authorized transition to `APPROVED` starts ServiceNow ticket creation.
 
-> **Project scope:** This is a proposed Rogers-context business architecture supported by hands-on AWS labs. It is not an official Rogers system or evidence of access to Rogers production. The retained sample application demonstrates microservice operations; it does not implement the telecom business logic. The EKS lab was previously deployed and subsequently destroyed by the owner. Screenshots are historical evidence, not a current availability claim.
+> **Project scope:** This is a proposed  business architecture supported by hands-on AWS labs. It is not an official Rogers system or evidence of access to Rogers production. The retained sample application demonstrates microservice operations; it does not implement the telecom business logic. The EKS lab was previously deployed and subsequently destroyed by the owner. Screenshots are historical evidence, not a current availability claim.
 
 ## Architecture
 
