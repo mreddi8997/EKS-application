@@ -70,7 +70,7 @@ jobs:
       - name: Validate Terraform
         run: terraform validate -no-color
       - name: terraform state list
-        run: terrafrom state list
+        run: terraform state list
       - name: Generate saved plan
         id: plan
         run: |
